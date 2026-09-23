@@ -41,12 +41,30 @@
 #endif
 #define RGBLIGHT_LED_COUNT 56
 
-/* Charybdis-specific features. */
+/* Auto mouse layer (a.k.a. "auto pointer").
+ *
+ * This firmware uses QMK's core auto-mouse feature, which the
+ * `bastardkb/bk_pointing_device` module turns on.  The old
+ * `CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_*` defines are dead and are gone.
+ *
+ * Idle time (ms) after the last trackball movement before the pointer layer
+ * is released.  Core default is 650; Argos cannot set this, so it lives here.
+ */
+#ifdef AUTO_MOUSE_TIME
+#    undef AUTO_MOUSE_TIME
+#endif
+#define AUTO_MOUSE_TIME 300
 
-#ifdef POINTING_DEVICE_ENABLE
-// Automatically enable the pointer layer when moving the trackball.  See also:
-// - `CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_TIMEOUT_MS`
-// - `CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_THRESHOLD`
-#    define CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_ENABLE
-#endif // POINTING_DEVICE_ENABLE
-       //
+/* Movement required to activate the layer.  Lower = more sensitive.
+ * Core default: 10. */
+#ifdef AUTO_MOUSE_THRESHOLD
+#    undef AUTO_MOUSE_THRESHOLD
+#endif
+#define AUTO_MOUSE_THRESHOLD 10
+
+/* Cooldown (ms) after a non-mouse keypress before the trackball may re-trigger
+ * the layer.  Raise this if the layer fires while you type.  Core default: 25. */
+#ifdef AUTO_MOUSE_DEBOUNCE
+#    undef AUTO_MOUSE_DEBOUNCE
+#endif
+#define AUTO_MOUSE_DEBOUNCE 25

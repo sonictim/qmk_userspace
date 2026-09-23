@@ -38,23 +38,20 @@ Change the value of `CHARYBDIS_AUTO_SNIPING_ON_LAYER` to automatically enable sn
 
 ### Auto pointer layer
 
-The pointer layer can be automatically enabled when moving the trackball. To enable or disable this behavior, add or remove the following define:
+**Note:** this keymap builds against the BastardKB fork with the
+`bastardkb/bk_pointing_device` community module, which uses QMK's core
+auto-mouse feature. The old `CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_*` defines
+below no longer exist -- they are silently ignored. The knobs that matter are
+in `config.h`:
 
-```c
-#define CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_ENABLE
-```
+- `AUTO_MOUSE_DEFAULT_LAYER` -- which layer to switch to (here: `LAYER_POINTER`);
+- `AUTO_MOUSE_TIME` -- idle ms before the layer is released (core default 650);
+- `AUTO_MOUSE_THRESHOLD` -- movement needed to trigger (core default 10);
+- `AUTO_MOUSE_DEBOUNCE` -- ms after a keypress before the ball can re-trigger
+  (core default 25).
 
-By default, the layer is turned off 1 second after the last registered trackball movement:
-
-```c
-#define CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_TIMEOUT_MS 1000
-```
-
-The trigger sensibility can also be tuned. The lower the value, the more sensible the trigger:
-
-```c
-#define CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_THRESHOLD 8
-```
+The feature itself is enabled/disabled from a flag in EEPROM, toggleable in
+Argos. `keyboard_post_init_user()` in `keymap.c` forces it on at boot.
 
 ## Layout
 
