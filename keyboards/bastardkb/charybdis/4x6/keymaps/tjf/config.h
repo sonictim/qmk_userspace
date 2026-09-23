@@ -29,7 +29,7 @@
 #ifdef AUTO_MOUSE_DEFAULT_LAYER
 #    undef AUTO_MOUSE_DEFAULT_LAYER
 #endif
-#define AUTO_MOUSE_DEFAULT_LAYER 1
+#define AUTO_MOUSE_DEFAULT_LAYER 3
 
 #ifdef LED_DPI_INDICATOR_INDEX
 #    undef LED_DPI_INDICATOR_INDEX
@@ -60,7 +60,7 @@
 #ifdef AUTO_MOUSE_THRESHOLD
 #    undef AUTO_MOUSE_THRESHOLD
 #endif
-#define AUTO_MOUSE_THRESHOLD 10
+#define AUTO_MOUSE_THRESHOLD 6
 
 /* Cooldown (ms) after a non-mouse keypress before the trackball may re-trigger
  * the layer.  Raise this if the layer fires while you type.  Core default: 25. */
