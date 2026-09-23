@@ -34,7 +34,7 @@ enum charybdis_keymap_layers {
 // #define CHARYBDIS_AUTO_SNIPING_ON_LAYER LAYER_POINTER
 
 #ifdef CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_ENABLE
-static uint16_t auto_pointer_layer_timer = 0;
+// static uint16_t auto_pointer_layer_timer = 0;
 
 #    ifndef CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_THRESHOLD
 #        define CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_THRESHOLD 8
