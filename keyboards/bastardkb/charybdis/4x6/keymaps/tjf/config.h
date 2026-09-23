@@ -27,17 +27,17 @@
 #endif // __arm__
 
 #ifdef AUTO_MOUSE_DEFAULT_LAYER
-#undef AUTO_MOUSE_DEFAULT_LAYER
+#    undef AUTO_MOUSE_DEFAULT_LAYER
 #endif
 #define AUTO_MOUSE_DEFAULT_LAYER 3
 
 #ifdef LED_DPI_INDICATOR_INDEX
-#undef LED_DPI_INDICATOR_INDEX
+#    undef LED_DPI_INDICATOR_INDEX
 #endif
 #define LED_DPI_INDICATOR_INDEX 1 // accomodate invisible 2 first LEDs for easier DIY build debugging
 
 #ifdef RGBLIGHT_LED_COUNT
-#undef RGBLIGHT_LED_COUNT
+#    undef RGBLIGHT_LED_COUNT
 #endif
 #define RGBLIGHT_LED_COUNT 56
 
