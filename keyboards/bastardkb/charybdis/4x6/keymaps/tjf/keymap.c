@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include QMK_KEYBOARD_H
+#include <stdlib.h>
 
 enum charybdis_keymap_layers {
     LAYER_BASE = 0,
@@ -28,12 +29,18 @@ enum charybdis_keymap_layers {
 #define PT_Z LT(LAYER_POINTER, KC_Z)
 #define PT_SLSH LT(LAYER_POINTER, KC_SLSH)
 
-#ifndef POINTING_DEVICE_ENABLE
+#ifdef POINTING_DEVICE_ENABLE
+/* Smart drag-scroll borrows Argos' "Custom mode 1" keycodes so it can be
+ * assigned from Argos.  Handling them here stops bk_pointing_device from
+ * running its own custom mode.  See bk_pointing_modes.c for the table. */
+#    define SMTSCRL 0x7E14     // Custom mode 1 (hold)
+#    define SMTSCRL_TOG 0x7E15 // Custom mode 1 (toggle)
+#else
 #    define DRGSCRL KC_NO
 #    define DPI_MOD KC_NO
 #    define S_D_MOD KC_NO
 #    define SNIPING KC_NO
-#endif // !POINTING_DEVICE_ENABLE
+#endif // POINTING_DEVICE_ENABLE
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -98,6 +105,123 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
 };
 // clang-format on
+
+#ifdef POINTING_DEVICE_ENABLE
+/* Smart drag-scroll.
+ *
+ * While SMTSCRL is held (or after SMTSCRL_TOG is tapped), trackball motion
+ * becomes scrolling.  The first
+ * SMART_SCROLL_LOCK_THRESHOLD counts of movement decide the axis (vertical or
+ * horizontal); after that, only that axis scrolls until the key is released,
+ * or until the ball sits still for SMART_SCROLL_RELOCK_MS, after which the
+ * next movement picks the axis again.
+ */
+#    ifndef SMART_SCROLL_LOCK_THRESHOLD
+#        define SMART_SCROLL_LOCK_THRESHOLD 8 // Counts of motion before picking an axis.
+#    endif
+#    ifndef SMART_SCROLL_DIVISOR
+#        define SMART_SCROLL_DIVISOR 8.0f // Higher = slower scrolling.
+#    endif
+#    ifndef SMART_SCROLL_RELOCK_MS
+#        define SMART_SCROLL_RELOCK_MS 200 // Idle time before the axis unlocks; 0 = never.
+#    endif
+
+typedef enum {
+    SCROLL_AXIS_NONE,
+    SCROLL_AXIS_V,
+    SCROLL_AXIS_H,
+} scroll_axis_t;
+
+static bool          smart_scroll_active = false;
+static scroll_axis_t smart_scroll_axis   = SCROLL_AXIS_NONE;
+static int16_t       smart_scroll_probe_x = 0; // Motion gathered before the axis is chosen.
+static int16_t       smart_scroll_probe_y = 0;
+static float         smart_scroll_acc     = 0; // Sub-tick remainder on the locked axis.
+static uint32_t      smart_scroll_last_motion = 0;
+
+static void smart_scroll_reset(void) {
+    smart_scroll_axis    = SCROLL_AXIS_NONE;
+    smart_scroll_probe_x = 0;
+    smart_scroll_probe_y = 0;
+    smart_scroll_acc     = 0;
+}
+
+/* Note: bk_pointing_device calls this before its own keycode handling, and
+ * returning false stops both it and the rest of QMK from seeing the key. */
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case SMTSCRL:
+            smart_scroll_active = record->event.pressed;
+            smart_scroll_reset();
+            return false;
+        case SMTSCRL_TOG:
+            if (record->event.pressed) {
+                smart_scroll_active = !smart_scroll_active;
+                smart_scroll_reset();
+            }
+            return false;
+    }
+    return true;
+}
+
+/* Keep the auto mouse layer active while SMTSCRL is held. */
+bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case SMTSCRL:
+        case SMTSCRL_TOG:
+            return true;
+    }
+    return false;
+}
+
+report_mouse_t pointing_device_task_user(report_mouse_t report) {
+    if (!smart_scroll_active) {
+        return report;
+    }
+
+    int16_t dx = report.x;
+    int16_t dy = report.y;
+    report.x   = 0;
+    report.y   = 0;
+
+    if (dx == 0 && dy == 0) {
+        return report;
+    }
+    // Re-pick the axis if the ball has been still long enough.
+    if (SMART_SCROLL_RELOCK_MS > 0 && smart_scroll_axis != SCROLL_AXIS_NONE && timer_elapsed32(smart_scroll_last_motion) > SMART_SCROLL_RELOCK_MS) {
+        smart_scroll_reset();
+    }
+    smart_scroll_last_motion = timer_read32();
+
+    if (smart_scroll_axis == SCROLL_AXIS_NONE) {
+        smart_scroll_probe_x += dx;
+        smart_scroll_probe_y += dy;
+        int16_t ax = abs(smart_scroll_probe_x);
+        int16_t ay = abs(smart_scroll_probe_y);
+        if (ax + ay < SMART_SCROLL_LOCK_THRESHOLD) {
+            return report; // Not enough movement to decide yet.
+        }
+        smart_scroll_axis = (ay >= ax) ? SCROLL_AXIS_V : SCROLL_AXIS_H;
+        // Carry the probe motion into the first scroll so nothing is lost.
+        dx = smart_scroll_probe_x;
+        dy = smart_scroll_probe_y;
+    }
+
+    smart_scroll_acc += (float)(smart_scroll_axis == SCROLL_AXIS_V ? -dy : dx) / SMART_SCROLL_DIVISOR;
+
+    int16_t ticks = (int16_t)smart_scroll_acc; // Truncates toward zero; remainder carries over.
+    if (ticks > 127) ticks = 127;
+    if (ticks < -127) ticks = -127;
+    smart_scroll_acc -= ticks;
+
+    if (smart_scroll_axis == SCROLL_AXIS_V) {
+        report.v = ticks;
+    } else {
+        report.h = ticks;
+    }
+    return report;
+}
+#endif // POINTING_DEVICE_ENABLE
 
 #ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
 /**
