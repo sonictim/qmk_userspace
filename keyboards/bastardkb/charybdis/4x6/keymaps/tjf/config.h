@@ -53,9 +53,9 @@
 #ifdef AUTO_MOUSE_TIME
 #    undef AUTO_MOUSE_TIME
 #endif
-#define AUTO_MOUSE_TIME 300
+#define AUTO_MOUSE_TIME 450
 
-/* Movement required to activate the layer.  Lower = more sensitive.
+/* Movement required to activa:te the layer.  Lower = more sensitive.
  * Core default: 10. */
 #ifdef AUTO_MOUSE_THRESHOLD
 #    undef AUTO_MOUSE_THRESHOLD

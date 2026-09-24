@@ -95,7 +95,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
        XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, DPI_MOD, S_D_MOD,    S_D_MOD, DPI_MOD, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
-       XXXXXXX, KC_LGUI, KC_LALT, KC_LCTL, KC_LSFT, XXXXXXX,    XXXXXXX, KC_RSFT, KC_RCTL, KC_RALT, KC_RGUI, XXXXXXX,
+       XXXXXXX, KC_LGUI, KC_LALT, KC_LCTL, KC_LSFT, XXXXXXX,    XXXXXXX, MS_BTN1, SMTSCRL, MS_BTN2, KC_RGUI, XXXXXXX,
   // ├──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────┤
        XXXXXXX, _______, DRGSCRL, SNIPING, XXXXXXX, XXXXXXX,    XXXXXXX, XXXXXXX, SNIPING, DRGSCRL, _______, XXXXXXX,
   // ╰──────────────────────────────────────────────────────┤ ├──────────────────────────────────────────────────────╯
@@ -123,7 +123,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #        define SMART_SCROLL_DIVISOR 8.0f // Higher = slower scrolling.
 #    endif
 #    ifndef SMART_SCROLL_RELOCK_MS
-#        define SMART_SCROLL_RELOCK_MS 200 // Idle time before the axis unlocks; 0 = never.
+#        define SMART_SCROLL_RELOCK_MS 500 // Idle time before the axis unlocks; 0 = never.
 #    endif
 
 typedef enum {
@@ -132,11 +132,11 @@ typedef enum {
     SCROLL_AXIS_H,
 } scroll_axis_t;
 
-static bool          smart_scroll_active = false;
-static scroll_axis_t smart_scroll_axis   = SCROLL_AXIS_NONE;
-static int16_t       smart_scroll_probe_x = 0; // Motion gathered before the axis is chosen.
-static int16_t       smart_scroll_probe_y = 0;
-static float         smart_scroll_acc     = 0; // Sub-tick remainder on the locked axis.
+static bool          smart_scroll_active      = false;
+static scroll_axis_t smart_scroll_axis        = SCROLL_AXIS_NONE;
+static int16_t       smart_scroll_probe_x     = 0; // Motion gathered before the axis is chosen.
+static int16_t       smart_scroll_probe_y     = 0;
+static float         smart_scroll_acc         = 0; // Sub-tick remainder on the locked axis.
 static uint32_t      smart_scroll_last_motion = 0;
 
 static void smart_scroll_reset(void) {
