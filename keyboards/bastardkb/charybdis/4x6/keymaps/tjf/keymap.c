@@ -15,24 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include QMK_KEYBOARD_H
-#include <stdlib.h>
 #ifdef POINTING_DEVICE_ENABLE
 #    include "bk_pointing_device.h"
-#endif
-
-/* Login-detail macros read their text from secrets.h, which git ignores (see
- * secrets.h.example).  Without it, those keys do nothing. */
-#if __has_include("secrets.h")
-#    include "secrets.h"
-#endif
-#ifndef SECRET_PASSWORD
-#    define SECRET_PASSWORD ""
-#endif
-#ifndef SECRET_USERNAME
-#    define SECRET_USERNAME ""
-#endif
-#ifndef SECRET_EMAIL
-#    define SECRET_EMAIL ""
+#    include "smart_scroll.h"
 #endif
 
 /* The pointer layer is 1 (must match AUTO_MOUSE_DEFAULT_LAYER in config.h);
@@ -204,124 +189,26 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 // clang-format on
 
-#ifdef POINTING_DEVICE_ENABLE
-/* Smart drag-scroll.
- *
- * While SMTSCRL is held (or after SMTSCRL_TOG is tapped), trackball motion
- * becomes scrolling.  The first
- * SMART_SCROLL_LOCK_THRESHOLD counts of movement decide the axis (vertical or
- * horizontal); after that, only that axis scrolls until the key is released,
- * or until the ball sits still for SMART_SCROLL_RELOCK_MS, after which the
- * next movement picks the axis again.
- */
-#    ifndef SMART_SCROLL_LOCK_THRESHOLD
-#        define SMART_SCROLL_LOCK_THRESHOLD 16 // Counts of motion before picking an axis.
-#    endif
-#    ifndef SMART_SCROLL_DIVISOR
-#        define SMART_SCROLL_DIVISOR 12.0f // Higher = slower scrolling.
-#    endif
-#    ifndef SMART_SCROLL_RELOCK_MS
-#        define SMART_SCROLL_RELOCK_MS 300 // Idle time before the axis unlocks; 0 = never.
-#    endif
+/* ---------------------------------------------------------------------------
+ * Hooks.  Values come from config.h.
+ * ------------------------------------------------------------------------- */
 
-typedef enum {
-    SCROLL_AXIS_NONE,
-    SCROLL_AXIS_V,
-    SCROLL_AXIS_H,
-} scroll_axis_t;
+/* Login-detail macros read their text from secrets.h, which git ignores (see
+ * secrets.h.example).  Without it, those keys do nothing. */
+#if __has_include("secrets.h")
+#    include "secrets.h"
+#endif
+#ifndef SECRET_PASSWORD
+#    define SECRET_PASSWORD ""
+#endif
+#ifndef SECRET_USERNAME
+#    define SECRET_USERNAME ""
+#endif
+#ifndef SECRET_EMAIL
+#    define SECRET_EMAIL ""
+#endif
 
-static bool          smart_scroll_active      = false;
-static scroll_axis_t smart_scroll_axis        = SCROLL_AXIS_NONE;
-static int16_t       smart_scroll_probe_x     = 0; // Motion gathered before the axis is chosen.
-static int16_t       smart_scroll_probe_y     = 0;
-static float         smart_scroll_acc         = 0; // Sub-tick remainder on the locked axis.
-static uint32_t      smart_scroll_last_motion = 0;
-
-static void smart_scroll_reset(void) {
-    smart_scroll_axis    = SCROLL_AXIS_NONE;
-    smart_scroll_probe_x = 0;
-    smart_scroll_probe_y = 0;
-    smart_scroll_acc     = 0;
-}
-
-/* Returns false when the key was a smart-scroll key and has been handled. */
-static bool process_smart_scroll(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case SMTSCRL:
-            smart_scroll_active = record->event.pressed;
-            smart_scroll_reset();
-            return false;
-        case SMTSCRL_TOG:
-            if (record->event.pressed) {
-                smart_scroll_active = !smart_scroll_active;
-                smart_scroll_reset();
-            }
-            return false;
-    }
-    return true;
-}
-
-/* Keep the auto mouse layer active while SMTSCRL is held. */
-bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case SMTSCRL:
-        case SMTSCRL_TOG:
-            return true;
-    }
-    return false;
-}
-
-report_mouse_t pointing_device_task_user(report_mouse_t report) {
-    if (!smart_scroll_active) {
-        return report;
-    }
-
-    int16_t dx = report.x;
-    int16_t dy = report.y;
-    report.x   = 0;
-    report.y   = 0;
-
-    if (dx == 0 && dy == 0) {
-        return report;
-    }
-    // Re-pick the axis if the ball has been still long enough.
-    if (SMART_SCROLL_RELOCK_MS > 0 && smart_scroll_axis != SCROLL_AXIS_NONE && timer_elapsed32(smart_scroll_last_motion) > SMART_SCROLL_RELOCK_MS) {
-        smart_scroll_reset();
-    }
-    smart_scroll_last_motion = timer_read32();
-
-    if (smart_scroll_axis == SCROLL_AXIS_NONE) {
-        smart_scroll_probe_x += dx;
-        smart_scroll_probe_y += dy;
-        int16_t ax = abs(smart_scroll_probe_x);
-        int16_t ay = abs(smart_scroll_probe_y);
-        if (ax + ay < SMART_SCROLL_LOCK_THRESHOLD) {
-            return report; // Not enough movement to decide yet.
-        }
-        smart_scroll_axis = (ay >= ax) ? SCROLL_AXIS_V : SCROLL_AXIS_H;
-        // Carry the probe motion into the first scroll so nothing is lost.
-        dx = smart_scroll_probe_x;
-        dy = smart_scroll_probe_y;
-    }
-
-    smart_scroll_acc += (float)(smart_scroll_axis == SCROLL_AXIS_V ? -dy : dx) / SMART_SCROLL_DIVISOR;
-
-    int16_t ticks = (int16_t)smart_scroll_acc; // Truncates toward zero; remainder carries over.
-    if (ticks > 127) ticks = 127;
-    if (ticks < -127) ticks = -127;
-    smart_scroll_acc -= ticks;
-
-    if (smart_scroll_axis == SCROLL_AXIS_V) {
-        report.v = ticks;
-    } else {
-        report.h = ticks;
-    }
-    return report;
-}
-#endif // POINTING_DEVICE_ENABLE
-
-/* Sends `text` followed by `after`, or nothing if `text` is empty (no
- * secrets.h). */
+/* Sends `text` followed by `after`, or nothing if `text` is empty. */
 static void send_secret(const char *text, uint16_t after) {
     if (text[0] != '\0') {
         send_string(text);
@@ -332,11 +219,18 @@ static void send_secret(const char *text, uint16_t after) {
 /* Note: bk_pointing_device calls this before its own keycode handling, and
  * returning false stops both it and the rest of QMK from seeing the key. */
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
 #ifdef POINTING_DEVICE_ENABLE
-    if (!process_smart_scroll(keycode, record)) {
-        return false;
-    }
+        case SMTSCRL:
+            smart_scroll_set_active(record->event.pressed);
+            return false;
+        case SMTSCRL_TOG:
+            if (record->event.pressed) {
+                smart_scroll_toggle();
+            }
+            return false;
 #endif // POINTING_DEVICE_ENABLE
+    }
     if (!record->event.pressed) {
         return true;
     }
@@ -364,24 +258,27 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 #ifdef POINTING_DEVICE_ENABLE
-/* Trackball DPI at boot (was set in Argos).  Steps of 200 from 400.  DPI_MOD
- * still changes it, but it resets to this on the next power-up. */
-#    ifndef POINTER_DPI
-#        define POINTER_DPI 1200
-#    endif
+/* Keep the auto mouse layer active while smart scroll is held. */
+bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case SMTSCRL:
+        case SMTSCRL_TOG:
+            return true;
+    }
+    return false;
+}
 
-/**
- * \brief Apply the pointer settings that used to live in Argos.
- *
- * `bk_pointing_device` restores these from EEPROM.  Module post-init runs
- * before this hook, so setting them here wins; EEPROM is only written when a
- * value actually changes.
- */
+report_mouse_t pointing_device_task_user(report_mouse_t report) {
+    return smart_scroll_task(report);
+}
+
+/* bk_pointing_device restores these from EEPROM; its post-init runs before
+ * this hook, so setting them here wins.  EEPROM is only written on change. */
 void keyboard_post_init_user(void) {
     bkpd_set_pointer_default_dpi(POINTER_DPI);
-    bkpd_set_auto_precision_on_mouse_layer_enabled(false);
-    bkpd_set_dragscroll_axis_invert_x(false);
-    bkpd_set_dragscroll_axis_invert_y(true); // DRGSCRL only; smart scroll is separate.
+    bkpd_set_auto_precision_on_mouse_layer_enabled(POINTER_AUTO_PRECISION);
+    bkpd_set_dragscroll_axis_invert_x(POINTER_DRAGSCROLL_INVERT_X);
+    bkpd_set_dragscroll_axis_invert_y(POINTER_DRAGSCROLL_INVERT_Y);
 #    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
     set_auto_mouse_layer(LAYER_POINTER);
     set_auto_mouse_enable(true);
@@ -390,30 +287,30 @@ void keyboard_post_init_user(void) {
 #endif // POINTING_DEVICE_ENABLE
 
 #ifdef RGB_MATRIX_ENABLE
-/* Per-layer colors (from the Argos config).  Each layer lights every LED in
- * one color, scaled by the current RGB brightness.  Base and pointer layers
- * show the normal RGB effect. */
-bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    uint8_t r, g, b;
-    switch (get_highest_layer(layer_state)) {
-        case LAYER_HYPER:
-            r = 0, g = 39, b = 64;
-            break;
-        case LAYER_NUMNAV:
-            r = 15, g = 0, b = 64;
-            break;
-        case LAYER_SYM:
-            r = 64, g = 0, b = 58;
-            break;
-        case LAYER_SYSTEM:
-            r = 64, g = 0, b = 4;
-            break;
-        default:
-            return false;
-    }
+static void fill_layer_color(uint8_t led_min, uint8_t led_max, uint8_t r, uint8_t g, uint8_t b) {
     const uint8_t val = rgb_matrix_get_val();
     for (uint8_t i = led_min; i < led_max; i++) {
         rgb_matrix_set_color(i, r * val / RGB_MATRIX_MAXIMUM_BRIGHTNESS, g * val / RGB_MATRIX_MAXIMUM_BRIGHTNESS, b * val / RGB_MATRIX_MAXIMUM_BRIGHTNESS);
+    }
+}
+
+/* Each layer lights every LED in one color (LAYER_COLOR_* in config.h),
+ * scaled by the current RGB brightness.  Base and pointer show the normal RGB
+ * effect. */
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    switch (get_highest_layer(layer_state)) {
+        case LAYER_HYPER:
+            fill_layer_color(led_min, led_max, LAYER_COLOR_HYPER);
+            break;
+        case LAYER_NUMNAV:
+            fill_layer_color(led_min, led_max, LAYER_COLOR_NUMNAV);
+            break;
+        case LAYER_SYM:
+            fill_layer_color(led_min, led_max, LAYER_COLOR_SYM);
+            break;
+        case LAYER_SYSTEM:
+            fill_layer_color(led_min, led_max, LAYER_COLOR_SYSTEM);
+            break;
     }
     return false;
 }
