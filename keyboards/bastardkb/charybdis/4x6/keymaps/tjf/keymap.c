@@ -117,7 +117,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * next movement picks the axis again.
  */
 #    ifndef SMART_SCROLL_LOCK_THRESHOLD
-#        define SMART_SCROLL_LOCK_THRESHOLD 8 // Counts of motion before picking an axis.
+#        define SMART_SCROLL_LOCK_THRESHOLD 16 // Counts of motion before picking an axis.
 #    endif
 #    ifndef SMART_SCROLL_DIVISOR
 #        define SMART_SCROLL_DIVISOR 8.0f // Higher = slower scrolling.
