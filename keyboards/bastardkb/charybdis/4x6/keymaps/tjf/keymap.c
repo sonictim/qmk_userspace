@@ -123,7 +123,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #        define SMART_SCROLL_DIVISOR 8.0f // Higher = slower scrolling.
 #    endif
 #    ifndef SMART_SCROLL_RELOCK_MS
-#        define SMART_SCROLL_RELOCK_MS 500 // Idle time before the axis unlocks; 0 = never.
+#        define SMART_SCROLL_RELOCK_MS 400 // Idle time before the axis unlocks; 0 = never.
 #    endif
 
 typedef enum {
@@ -201,7 +201,7 @@ report_mouse_t pointing_device_task_user(report_mouse_t report) {
         if (ax + ay < SMART_SCROLL_LOCK_THRESHOLD) {
             return report; // Not enough movement to decide yet.
         }
-        smart_scroll_axis = (ay * 3 >= ax * 2) ? SCROLL_AXIS_V : SCROLL_AXIS_H;
+        smart_scroll_axis = (ay >= ax) ? SCROLL_AXIS_V : SCROLL_AXIS_H;
         // Carry the probe motion into the first scroll so nothing is lost.
         dx = smart_scroll_probe_x;
         dy = smart_scroll_probe_y;
