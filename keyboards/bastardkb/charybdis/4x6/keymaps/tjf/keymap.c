@@ -236,3 +236,18 @@ void keyboard_post_init_user(void) {
     set_auto_mouse_enable(true);
 }
 #endif // POINTING_DEVICE_AUTO_MOUSE_ENABLE
+
+/* Shift mod-taps on non-letter keys (Esc/Shift, Enter/Shift, ...) turn into
+ * Shift the moment another key goes down.  Letter mod-taps (home-row mods)
+ * keep the default behavior so fast typing rolls aren't read as capitals.
+ * Matches on keycode, so it follows keys wherever Argos puts them. */
+bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
+    if (IS_QK_MOD_TAP(keycode)) {
+        uint8_t  mods = QK_MOD_TAP_GET_MODS(keycode);
+        uint16_t tap  = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+        if ((mods & MOD_LSFT) && !(tap >= KC_A && tap <= KC_Z)) {
+            return true;
+        }
+    }
+    return false;
+}

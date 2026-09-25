@@ -68,3 +68,9 @@
 #    undef AUTO_MOUSE_DEBOUNCE
 #endif
 #define AUTO_MOUSE_DEBOUNCE 25
+
+/* Tap-hold: decide mod-taps faster.
+ * PERMISSIVE_HOLD: another key tapped (down+up) while a mod-tap is held -> hold.
+ * HOLD_ON_OTHER_KEY_PRESS_PER_KEY: see get_hold_on_other_key_press() in keymap.c. */
+#define PERMISSIVE_HOLD
+#define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
