@@ -30,7 +30,7 @@
 #ifdef AUTO_MOUSE_DEFAULT_LAYER
 #    undef AUTO_MOUSE_DEFAULT_LAYER
 #endif
-#define AUTO_MOUSE_DEFAULT_LAYER 3
+#define AUTO_MOUSE_DEFAULT_LAYER 1
 
 /* Workaround: bk_pointing_device builds an Argos info packet using these
  * names from argos.h, even when Argos is not enabled.  Values match argos.h.
