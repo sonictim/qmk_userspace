@@ -9,3 +9,7 @@
 *.hex
 *.bin
 *.uf2
+
+# Local-only secrets and editor build database
+secrets.h
+compile_commands.json

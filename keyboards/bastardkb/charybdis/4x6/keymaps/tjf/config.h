@@ -16,20 +16,32 @@
  */
 #pragma once
 
-#ifdef VIA_ENABLE
-/* VIA configuration. */
-#    define DYNAMIC_KEYMAP_LAYER_COUNT 4
-#endif // VIA_ENABLE
-
 #ifndef __arm__
 /* Disable unused features. */
 #    define NO_ACTION_ONESHOT
 #endif // __arm__
 
+/* The whole layout lives in keymap.c; Argos/VIA are not used, so nothing in
+ * EEPROM overrides it. */
+
+/* Pointer layer index.  Must match LAYER_POINTER in keymap.c.  The
+ * bk_pointing_device module uses it for auto-mouse, the DPI indicator and
+ * auto-precision. */
 #ifdef AUTO_MOUSE_DEFAULT_LAYER
 #    undef AUTO_MOUSE_DEFAULT_LAYER
 #endif
 #define AUTO_MOUSE_DEFAULT_LAYER 3
+
+/* Workaround: bk_pointing_device builds an Argos info packet using these
+ * names from argos.h, even when Argos is not enabled.  Values match argos.h.
+ * Remove if the Argos module is added back. */
+#define pointing_device_type_unknown 0
+#define pointing_device_type_trackpad_procyon 1
+#define pointing_device_type_trackball 2
+#define pointing_device_type_trackpad_cirque 3
+
+/* Per-layer RGB colors need the layer state on both halves. */
+#define SPLIT_LAYER_STATE_ENABLE
 
 #ifdef LED_DPI_INDICATOR_INDEX
 #    undef LED_DPI_INDICATOR_INDEX
@@ -48,7 +60,7 @@
  * `CHARYBDIS_AUTO_POINTER_LAYER_TRIGGER_*` defines are dead and are gone.
  *
  * Idle time (ms) after the last trackball movement before the pointer layer
- * is released.  Core default is 650; Argos cannot set this, so it lives here.
+ * is released.  Core default is 650.
  */
 #ifdef AUTO_MOUSE_TIME
 #    undef AUTO_MOUSE_TIME
@@ -68,6 +80,9 @@
 #    undef AUTO_MOUSE_DEBOUNCE
 #endif
 #define AUTO_MOUSE_DEBOUNCE 25
+
+/* Tap-hold timing, in ms (was set in Argos). */
+#define TAPPING_TERM 200
 
 /* Tap-hold: decide mod-taps faster.
  * PERMISSIVE_HOLD: another key tapped (down+up) while a mod-tap is held -> hold.
