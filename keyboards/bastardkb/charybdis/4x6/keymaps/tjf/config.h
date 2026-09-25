@@ -53,14 +53,14 @@
 #ifdef AUTO_MOUSE_TIME
 #    undef AUTO_MOUSE_TIME
 #endif
-#define AUTO_MOUSE_TIME 200
+#define AUTO_MOUSE_TIME 450
 
 /* Movement required to activa:te the layer.  Lower = more sensitive.
  * Core default: 10. */
 #ifdef AUTO_MOUSE_THRESHOLD
 #    undef AUTO_MOUSE_THRESHOLD
 #endif
-#define AUTO_MOUSE_THRESHOLD 1
+#define AUTO_MOUSE_THRESHOLD 5
 
 /* Cooldown (ms) after a non-mouse keypress before the trackball may re-trigger
  * the layer.  Raise this if the layer fires while you type.  Core default: 25. */
