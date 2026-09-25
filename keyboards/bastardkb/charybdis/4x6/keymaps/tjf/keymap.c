@@ -120,10 +120,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #        define SMART_SCROLL_LOCK_THRESHOLD 16 // Counts of motion before picking an axis.
 #    endif
 #    ifndef SMART_SCROLL_DIVISOR
-#        define SMART_SCROLL_DIVISOR 8.0f // Higher = slower scrolling.
+#        define SMART_SCROLL_DIVISOR 12.0f // Higher = slower scrolling.
 #    endif
 #    ifndef SMART_SCROLL_RELOCK_MS
-#        define SMART_SCROLL_RELOCK_MS 400 // Idle time before the axis unlocks; 0 = never.
+#        define SMART_SCROLL_RELOCK_MS 300 // Idle time before the axis unlocks; 0 = never.
 #    endif
 
 typedef enum {
