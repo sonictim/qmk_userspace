@@ -37,6 +37,11 @@
 #define PERMISSIVE_HOLD
 #define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
 
+/* Combos (key_combos in keymap.c): keys pressed within this many ms of each
+ * other count as the combo.  Lower = fewer accidental combos on fast rolls
+ * like "as"; higher = easier to hit.  Core default: 50. */
+#define COMBO_TERM 40
+
 /* ---------------------------------------------------------------------------
  * Auto mouse (pointer layer turns on when the trackball moves)
  * ------------------------------------------------------------------------- */

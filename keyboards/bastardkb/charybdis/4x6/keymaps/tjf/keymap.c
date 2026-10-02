@@ -27,10 +27,9 @@ enum charybdis_keymap_layers {
     LAYER_POINTER,
     LAYER_BASE2,
     LAYER_POINTER2,
-    LAYER_HYPER,  // One-shot: every key sent with Hyper.
-    LAYER_NUMNAV, // Numpad, Ctrl+numpad, arrows, volume.
-    LAYER_SYM,    // Brackets and comparison macros.
-    LAYER_SYSTEM, // Boot, EEPROM clear, lighting.
+    LAYER_MISSING, // Numpad, Ctrl+numpad, arrows, volume.
+    LAYER_KEYPAD,  // Brackets and comparison macros.
+    LAYER_SYSTEM,  // Boot, EEPROM clear, lighting.
 };
 
 _Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAULT_LAYER in config.h to match LAYER_POINTER");
@@ -38,10 +37,9 @@ _Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAUL
 /* Short names so every key fits the same column width in the layouts. */
 #define SFT_ESC LSFT_T(KC_ESC)
 #define GUI_SPC LGUI_T(KC_SPC)
-#define SYM_SPC LT(LAYER_SYM, KC_SPC)
-#define NUMNAV LT(LAYER_NUMNAV, KC_SPC)
+#define KEYPAD LT(LAYER_KEYPAD, KC_SPC)
+#define MISSING LT(LAYER_MISSING, KC_SPC)
 #define SYS MO(LAYER_SYSTEM)
-#define HYP_OSL OSL(LAYER_HYPER)
 #define BASE2_TO TO(LAYER_BASE)
 #define PT_Z LT(LAYER_POINTER, KC_Z)
 #define PT_Z2 LT(LAYER_POINTER2, KC_Z)
@@ -49,6 +47,7 @@ _Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAUL
 
 enum custom_keycodes {
     SMTSCRL = SAFE_RANGE, // Smart scroll (hold).
+    CTL_SFT,              // Hold Ctrl+Shift and leave the auto pointer layer.
     M_PASS,               // SECRET_PASSWORD, then Enter.
     M_PASS2,              // SECRET_PASSWORD2, then Enter.
     M_USER,               // SECRET_USERNAME, then Tab.
@@ -56,6 +55,14 @@ enum custom_keycodes {
     M_NEQ,                // !=
     M_GTE,                // >=
     M_LTE,                // <=
+};
+
+/* A + S pressed together (within COMBO_TERM) -> CTL_SFT: Ctrl+Shift right away,
+ * held until either key is released.  The keys must match the layout exactly,
+ * so this only fires on the base layer's mod-taps, never on BASE2's plain A/S. */
+const uint16_t PROGMEM ctl_sft_combo[] = {LCTL_T(KC_A), LSFT_T(KC_S), COMBO_END};
+combo_t                key_combos[]    = {
+    COMBO(ctl_sft_combo, CTL_SFT),
 };
 
 // clang-format off
@@ -70,8 +77,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
            KC_LCTL,        PT_Z,          KC_X,          KC_C,          KC_V,          KC_B,            KC_N,          KC_M,       KC_COMM,        KC_DOT,       KC_SLSH,        KC_EQL,
   // ╰────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
-                                                         KC_LALT,       GUI_SPC,        NUMNAV,         KC_ENT,         LM(LAYER_BASE, MOD_HYPR),
-                                                                        SYM_SPC,    OSM(MOD_HYPR),         KC_BSPC
+                                                         KC_LALT,       GUI_SPC,        MISSING,         KC_ENT,         LM(LAYER_BASE, MOD_HYPR),
+                                                                        KEYPAD,    OSM(MOD_HYPR),         KC_BSPC
   //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
   ),
 
@@ -101,41 +108,27 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
             _______,       PT_Z2,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
                                                          _______,       KC_LGUI,       _______,         _______,    LM(LAYER_BASE2, MOD_HYPR),
-                                                                        _______,    MO(LAYER_POINTER2),  _______
+                                                        OSL(LAYER_POINTER2),    OSL(LAYER_POINTER2),  _______
   //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
   ),
 
   [LAYER_POINTER2] = LAYOUT(
   // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-            _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
+            M_PASS2,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
+            M_EMAIL,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            _______,       _______,       _______,       _______,       _______,       _______,         _______,       MS_BTN1,       DRGSCRL,       MS_BTN2,       _______,       _______,
+            M_USER,       _______,       _______,       _______,       _______,       _______,         _______,       MS_BTN1,       DRGSCRL,       MS_BTN2,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
+            M_PASS,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
                                                          _______,       _______,       _______,         _______,       _______,
                                                                         _______,       _______,         _______
   //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
   ),
 
-  [LAYER_HYPER] = LAYOUT(
-  // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-       HYPR(KC_GRV),    HYPR(KC_1),    HYPR(KC_2),    HYPR(KC_3),    HYPR(KC_4),    HYPR(KC_5),      HYPR(KC_6),    HYPR(KC_7),    HYPR(KC_8),    HYPR(KC_9),    HYPR(KC_0), HYPR(KC_MINS),
-  // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-       HYPR(KC_TAB),    HYPR(KC_Q),    HYPR(KC_W),    HYPR(KC_E),    HYPR(KC_R),    HYPR(KC_T),      HYPR(KC_Y),    HYPR(KC_U),    HYPR(KC_I),    HYPR(KC_O),    HYPR(KC_P), HYPR(KC_BSLS),
-  // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-       HYPR(KC_ESC),    HYPR(KC_A),    HYPR(KC_S),    HYPR(KC_D),    HYPR(KC_F),    HYPR(KC_G),      HYPR(KC_H),    HYPR(KC_J),    HYPR(KC_K),    HYPR(KC_L), HYPR(KC_SCLN), HYPR(KC_QUOT),
-  // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-             M_PASS,    HYPR(KC_Z),    HYPR(KC_X),    HYPR(KC_C),    HYPR(KC_V),    HYPR(KC_B),      HYPR(KC_N),    HYPR(KC_M), HYPR(KC_COMM),  HYPR(KC_DOT), HYPR(KC_SLSH),  HYPR(KC_EQL),
-  // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
-                                                         _______,       _______,       _______,         _______,       KC_PENT,
-                                                                        _______,       _______,         _______
-  //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
-  ),
 
-  [LAYER_NUMNAV] = LAYOUT(
+  [LAYER_MISSING] = LAYOUT(
   // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
             KC_F11,         KC_F1,         KC_F2,         KC_F3,         KC_F4,         KC_F5,           KC_F6,         KC_F7,         KC_F8,         KC_F9,         KC_F10,       KC_F12,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -150,9 +143,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
   ),
 
-  [LAYER_SYM] = LAYOUT(
+  [LAYER_KEYPAD] = LAYOUT(
   // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-            M_PASS2,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       KC_PMNS,
+            M_PASS2,       KC_P1,       KC_P2,       KC_P3,       KC_P4,       KC_P5,         KC_P6,       KC_P7,       KC_P8,       KC_P9,       KC_P0,       KC_PMNS,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
             M_EMAIL,       _______,       _______,       _______,       _______,       _______,         _______,        KC_P7,         KC_P8,         KC_P9,       _______,       KC_PPLS,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
@@ -221,6 +214,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             smart_scroll_set_active(record->event.pressed);
             return false;
 #endif // POINTING_DEVICE_ENABLE
+        case CTL_SFT:
+            if (record->event.pressed) {
+                register_mods(MOD_LCTL | MOD_LSFT);
+            } else {
+                unregister_mods(MOD_LCTL | MOD_LSFT);
+            }
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+            /* QMK leaves the pointer layer on for modifiers (for Ctrl+click);
+             * treat this like a normal key instead, so it drops the layer. */
+            auto_mouse_reset_trigger(record->event.pressed);
+#endif
+            return false;
     }
     if (!record->event.pressed) {
         return true;
@@ -354,13 +359,10 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         case LAYER_POINTER2:
             light_pressed_keys(led_min, led_max);
             break;
-        case LAYER_HYPER:
-            fill_layer_color(led_min, led_max, LAYER_COLOR_HYPER);
-            break;
-        case LAYER_NUMNAV:
+        case LAYER_MISSING:
             fill_layer_color(led_min, led_max, LAYER_COLOR_NUMNAV);
             break;
-        case LAYER_SYM:
+        case LAYER_KEYPAD:
             fill_layer_color(led_min, led_max, LAYER_COLOR_SYM);
             break;
         case LAYER_SYSTEM:
@@ -372,10 +374,19 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 #endif // RGB_MATRIX_ENABLE
 
 /* Shift mod-taps on non-letter keys (Esc/Shift, Enter/Shift, ...) turn into
- * Shift the moment another key goes down.  Letter mod-taps (home-row mods)
- * keep the default behavior so fast typing rolls aren't read as capitals.
+ * Shift the moment another key goes down, and so do A and S (see below).
+ * Other letter mod-taps (home-row mods) keep the default behavior so fast
+ * rolls aren't read as modifiers.
  * Matches on keycode, so it follows keys wherever they are in the layout. */
 bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        /* Ctrl on A and Shift on S also turn on the moment another key goes
+         * down, so Ctrl/Shift + click, drag or J/K happen instantly in Pro
+         * Tools.  Base layer only: BASE2 (for typing) uses plain A and S. */
+        case LCTL_T(KC_A):
+        case LSFT_T(KC_S):
+            return true;
+    }
     if (IS_QK_MOD_TAP(keycode)) {
         uint8_t  mods = QK_MOD_TAP_GET_MODS(keycode);
         uint16_t tap  = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
