@@ -406,6 +406,8 @@ void keyboard_post_init_user(void) {
 #endif // POINTING_DEVICE_ENABLE
 
 #ifdef RGB_MATRIX_ENABLE
+#    include "lib/lib8tion/lib8tion.h" // sqrt16() for the ripple.
+
 static void fill_layer_color(uint8_t led_min, uint8_t led_max, uint8_t r, uint8_t g, uint8_t b) {
     const uint8_t val = rgb_matrix_get_val();
     for (uint8_t i = led_min; i < led_max; i++) {
@@ -413,15 +415,30 @@ static void fill_layer_color(uint8_t led_min, uint8_t led_max, uint8_t r, uint8_
     }
 }
 
-/* Pressed-key lighting for BASE2.  Each key press picks a new
- * color; the key stays lit while held and fades out after release.  Each half
- * spots presses by comparing its own key matrix frame to frame, so this works
- * on both sides of the split without sending key events across. */
+/* Pressed-key lighting for BASE2.  Each key press picks a new color; the key
+ * stays lit while held and fades out after release, and a ring of that color
+ * ripples outward from it.  Each half spots presses by comparing its own key
+ * matrix frame to frame, so this works on both sides of the split without
+ * sending key events across. */
 static bool     key_held[RGB_MATRIX_LED_COUNT];
 static uint8_t  key_hue[RGB_MATRIX_LED_COUNT];
 static uint16_t key_released_at[RGB_MATRIX_LED_COUNT];
 static bool     key_fading[RGB_MATRIX_LED_COUNT];
 static uint8_t  next_hue = 0;
+
+typedef struct {
+    led_point_t center; // Where the key is (g_led_config.point).
+    uint8_t     hue;
+    uint16_t    start;
+    bool        active;
+} ripple_t;
+static ripple_t ripples[RIPPLE_COUNT];
+static uint8_t  next_ripple = 0; // Oldest one is reused when all are busy.
+
+static void start_ripple(uint8_t led, uint8_t hue) {
+    ripples[next_ripple] = (ripple_t){g_led_config.point[led], hue, timer_read(), true};
+    next_ripple          = (next_ripple + 1) % RIPPLE_COUNT;
+}
 
 /* Watches for presses and releases on every frame, on any layer, so the state
  * is current when BASE2 turns on. */
@@ -436,6 +453,7 @@ static void track_pressed_keys(uint8_t led_min, uint8_t led_max) {
             if (held && !key_held[led]) {
                 key_hue[led] = next_hue;
                 next_hue += PRESSED_HUE_STEP;
+                start_ripple(led, key_hue[led]);
             } else if (!held && key_held[led]) {
                 key_released_at[led] = timer_read();
                 key_fading[led]      = true;
@@ -445,11 +463,23 @@ static void track_pressed_keys(uint8_t led_min, uint8_t led_max) {
     }
 }
 
-/* All LEDs off except held keys (full brightness) and released keys (fading
- * out over PRESSED_FADE_MS). */
+/* All LEDs off except held keys (full brightness), released keys (fading out
+ * over PRESSED_FADE_MS) and ripples.  Where several overlap, the brightest
+ * wins. */
 static void light_pressed_keys(uint8_t led_min, uint8_t led_max) {
+    /* Each ripple's ring radius this frame; it is done once past the edge. */
+    uint8_t radius[RIPPLE_COUNT];
+    for (uint8_t i = 0; i < RIPPLE_COUNT; i++) {
+        uint32_t r = (uint32_t)timer_elapsed(ripples[i].start) * RIPPLE_SPEED / 1000;
+        if (r >= RIPPLE_MAX_RADIUS) {
+            ripples[i].active = false;
+        }
+        radius[i] = r < RIPPLE_MAX_RADIUS ? r : RIPPLE_MAX_RADIUS;
+    }
+
     for (uint8_t led = led_min; led < led_max; led++) {
         uint8_t val = 0;
+        uint8_t hue = key_hue[led];
         if (key_held[led]) {
             val = PRESSED_BRIGHTNESS;
         } else if (key_fading[led]) {
@@ -460,7 +490,26 @@ static void light_pressed_keys(uint8_t led_min, uint8_t led_max) {
                 key_fading[led] = false;
             }
         }
-        rgb_t rgb = hsv_to_rgb((hsv_t){key_hue[led], 255, val});
+        for (uint8_t i = 0; i < RIPPLE_COUNT; i++) {
+            if (!ripples[i].active) {
+                continue;
+            }
+            int16_t dx   = g_led_config.point[led].x - ripples[i].center.x;
+            int16_t dy   = g_led_config.point[led].y - ripples[i].center.y;
+            int16_t dist = sqrt16(dx * dx + dy * dy);
+            int16_t off  = abs(dist - radius[i]); // How far this LED is from the ring.
+            if (off >= RIPPLE_WIDTH) {
+                continue;
+            }
+            /* Brightest on the ring, dimmer to the sides, and the whole ring
+             * fades as it grows. */
+            uint8_t v = (uint32_t)PRESSED_BRIGHTNESS * (RIPPLE_WIDTH - off) / RIPPLE_WIDTH * (RIPPLE_MAX_RADIUS - radius[i]) / RIPPLE_MAX_RADIUS;
+            if (v > val) {
+                val = v;
+                hue = ripples[i].hue;
+            }
+        }
+        rgb_t rgb = hsv_to_rgb((hsv_t){hue, 255, val});
         rgb_matrix_set_color(led, rgb.r, rgb.g, rgb.b);
     }
 }
