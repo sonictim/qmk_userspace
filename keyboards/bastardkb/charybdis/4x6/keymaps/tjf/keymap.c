@@ -25,8 +25,7 @@
 enum charybdis_keymap_layers {
     LAYER_BASE = 0,
     LAYER_POINTER,
-    LAYER_BASE2,
-    LAYER_POINTER2,
+    LAYER_BASE2,   // Pro Tools: home-row mods and combos (TG on MISSING's G).
     LAYER_MISSING, // Numpad, Ctrl+numpad, arrows, volume.
     LAYER_KEYPAD,  // Brackets and comparison macros.
     LAYER_SYSTEM,  // Boot, EEPROM clear, lighting.
@@ -37,14 +36,12 @@ _Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAUL
 /* Short names so every key fits the same column width in the layouts. */
 #define SFT_ESC LSFT_T(KC_ESC)
 #define GUI_SPC LGUI_T(KC_SPC)
+#define HYP_SPC HYPR_T(KC_SPC)
 #define KEYPAD LT(LAYER_KEYPAD, KC_SPC)
-#define MISSING LT(LAYER_MISSING, KC_SPC)
+#define MISSING LT(LAYER_MISSING, KC_SLSH)
 #define SYS MO(LAYER_SYSTEM)
-#define BASE2_TO TO(LAYER_BASE)
 #define PT_Z LT(LAYER_POINTER, KC_Z)
-#define PT_Z2 LT(LAYER_POINTER2, KC_Z)
-#define PT_SCLN LT(LAYER_POINTER, KC_SCLN)
-
+#define K_DRAG LT(0, KC_K) // Tap K, hold drag-scroll (see process_record_user).
 enum custom_keycodes {
     SMTSCRL = SAFE_RANGE, // Smart scroll (hold).
     CTL_SFT,              // Hold Ctrl+Shift and leave the auto pointer layer.
@@ -55,30 +52,64 @@ enum custom_keycodes {
     M_NEQ,                // !=
     M_GTE,                // >=
     M_LTE,                // <=
+    AUTOPTR,              // Auto pointer layer on/off (off at boot).
 };
 
-/* A + S pressed together (within COMBO_TERM) -> CTL_SFT: Ctrl+Shift right away,
- * held until either key is released.  The keys must match the layout exactly,
- * so this only fires on the base layer's mod-taps, never on BASE2's plain A/S. */
-const uint16_t PROGMEM ctl_sft_combo[] = {LCTL_T(KC_A), LSFT_T(KC_S), COMBO_END};
-combo_t                key_combos[]    = {
-    COMBO(ctl_sft_combo, CTL_SFT),
+/* Combos: keys pressed together (within COMBO_TERM).  The keys must match the
+ * layout exactly, so the A-F ones only fire on BASE2's home-row mods, never on
+ * base's plain letters.  When one combo is part of a bigger one (S+D and D+F
+ * inside S+D+F), QMK waits and picks the bigger one.
+ *   A + S     -> CTL_SFT: Ctrl+Shift right away, held until a key is released.
+ *   S + D     -> Shift+S       (tap only, see get_combo_must_tap)
+ *   D + F     -> Shift+Cmd+S   (tap only)
+ *   S + D + F -> Shift+Opt+S   (tap only)
+ *   J + K     -> left click    (held while the keys are held)
+ *   K + L     -> right click */
+enum combos {
+    COMBO_CTL_SFT,
+    COMBO_SFT_S,
+    COMBO_SFT_CMD_S,
+    COMBO_SFT_OPT_S,
+    COMBO_LCLICK,
+    COMBO_RCLICK,
 };
+const uint16_t PROGMEM ctl_sft_combo[]   = {LCTL_T(KC_A), LSFT_T(KC_S), COMBO_END};
+const uint16_t PROGMEM sft_s_combo[]     = {LSFT_T(KC_S), LALT_T(KC_D), COMBO_END};
+const uint16_t PROGMEM sft_cmd_s_combo[] = {LALT_T(KC_D), LGUI_T(KC_F), COMBO_END};
+const uint16_t PROGMEM sft_opt_s_combo[] = {LSFT_T(KC_S), LALT_T(KC_D), LGUI_T(KC_F), COMBO_END};
+const uint16_t PROGMEM lclick_combo[]    = {KC_J, K_DRAG, COMBO_END};
+const uint16_t PROGMEM rclick_combo[]    = {KC_L, K_DRAG, COMBO_END};
+combo_t                key_combos[]      = {
+    [COMBO_CTL_SFT] = COMBO(ctl_sft_combo, CTL_SFT), [COMBO_SFT_S] = COMBO(sft_s_combo, LSFT(KC_S)), [COMBO_SFT_CMD_S] = COMBO(sft_cmd_s_combo, LSG(KC_S)), [COMBO_SFT_OPT_S] = COMBO(sft_opt_s_combo, LSA(KC_S)), [COMBO_LCLICK] = COMBO(lclick_combo, MS_BTN1), [COMBO_RCLICK] = COMBO(rclick_combo, MS_BTN2),
+};
+
+/* Tap-only combos fire when the keys are released within COMBO_HOLD_TERM
+ * (= TAPPING_TERM).  Held longer, the combo is dropped and the keys act on
+ * their own, so they become the normal home-row mods. */
+bool get_combo_must_tap(uint16_t combo_index, combo_t *combo) {
+    switch (combo_index) {
+        case COMBO_SFT_S:
+        case COMBO_SFT_CMD_S:
+        case COMBO_SFT_OPT_S:
+            return true;
+    }
+    return false;
+}
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [LAYER_BASE] = LAYOUT(
   // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-             KC_GRV,      KC_1,              KC_2,          KC_3,         KC_4,           KC_5,          KC_6,              KC_7,      KC_8,         KC_9,              KC_0,    KC_MINS,
+             KC_ESC,      KC_1,              KC_2,          KC_3,         KC_4,           KC_5,          KC_6,              KC_7,      KC_8,         KC_9,              KC_0,    KC_MINS,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
              KC_TAB,          KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,            KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,       KC_BSLS,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            SFT_ESC,  LCTL_T(KC_A),  LSFT_T(KC_S),  LALT_T(KC_D),  LGUI_T(KC_F),          KC_G,            KC_H,          KC_J,          KC_K,          KC_L,       PT_SCLN,       KC_QUOT,
+            SFT_ESC,        KC_A,            KC_S,       KC_D,       KC_F,          KC_G,            KC_H,          KC_J,          K_DRAG,          KC_L,       KC_SCLN,       KC_QUOT,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
            KC_LCTL,        PT_Z,          KC_X,          KC_C,          KC_V,          KC_B,            KC_N,          KC_M,       KC_COMM,        KC_DOT,       KC_SLSH,        KC_EQL,
   // ╰────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
-                                                         KC_LALT,       GUI_SPC,        MISSING,         KC_ENT,         LM(LAYER_BASE, MOD_HYPR),
-                                                                        KEYPAD,    OSM(MOD_HYPR),         KC_BSPC
+                                                         KC_LALT,       GUI_SPC,       HYP_SPC,         KC_ENT,         MISSING,
+                                                                        KEYPAD,    MISSING,         KC_BSPC
   //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
   ),
 
@@ -99,42 +130,29 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
   [LAYER_BASE2] = LAYOUT(
   // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-            KC_ESC,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
+            _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
             _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            KC_LSFT,       KC_A,            KC_S,        KC_D,           KC_F,       _______,         _______,       KC_J,       KC_K,    KC_L,       KC_SCLN,       _______,
+            _______,       LCTL_T(KC_A),  LSFT_T(KC_S),  LALT_T(KC_D),  LGUI_T(KC_F),  _______,         _______,       _______,       _______,    _______,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            _______,       PT_Z2,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
+            _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
   // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
-                                                         _______,       KC_LGUI,       _______,         _______,    LM(LAYER_BASE2, MOD_HYPR),
-                                                        OSL(LAYER_POINTER2),    OSL(LAYER_POINTER2),  _______
+                                                         _______,       _______,       _______,         _______,    _______,
+                                                                        _______,    _______,          _______
   //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
   ),
 
-  [LAYER_POINTER2] = LAYOUT(
-  // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-            M_PASS2,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
-  // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            M_EMAIL,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
-  // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            M_USER,       _______,       _______,       _______,       _______,       _______,         _______,       MS_BTN1,       DRGSCRL,       MS_BTN2,       _______,       _______,
-  // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            M_PASS,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       _______,       _______,       _______,       _______,
-  // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
-                                                         _______,       _______,       _______,         _______,       _______,
-                                                                        _______,       _______,         _______
-  //                                              ╰────────────────────────────────────────────╯ ╰─────────────────────────────╯
-  ),
+
 
 
   [LAYER_MISSING] = LAYOUT(
   // ╭─────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────╮
-            KC_F11,         KC_F1,         KC_F2,         KC_F3,         KC_F4,         KC_F5,           KC_F6,         KC_F7,         KC_F8,         KC_F9,         KC_F10,       KC_F12,
+            KC_GRV,         KC_F1,         KC_F2,         KC_F3,         KC_F4,         KC_F5,           KC_F6,         KC_F7,         KC_F8,         KC_F9,         KC_F10,       KC_F12,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
             _______,       _______,       _______,      _______,     _______,        _______,         _______,       _______,       KC_LBRC,       KC_RBRC,       KC_PGUP,       KC_VOLU,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            _______,       _______,       _______,       _______,    _______,        _______,        KC_LEFT,       KC_DOWN,         KC_UP,       KC_RGHT,       KC_PGDN,       KC_VOLD,
+            _______,       KC_LCTL,       KC_LSFT,       KC_LALT,    KC_LGUI,     TG(LAYER_BASE2),        KC_LEFT,       KC_DOWN,         KC_UP,       KC_RGHT,       KC_PGDN,       KC_VOLD,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
             SYS,       _______,      _______,        _______,        _______,        _______,           M_NEQ,        KC_EQL,         M_LTE,         M_GTE,       _______,       KC_MUTE,
   // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
@@ -166,7 +184,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
             _______,       _______,       _______,       _______,       _______,       _______,         _______,       _______,       DRGSCRL,       _______,       _______,       _______,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            _______,       _______,       _______,       _______,       _______,       _______,         RM_NEXT,    TG(LAYER_BASE2),  _______,       _______,       _______,       _______,
+            _______,       _______,       _______,       _______,       _______,       _______,         RM_NEXT,       AUTOPTR,       _______,       _______,       _______,       _______,
   // ╰─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
                                                          _______,       _______,       _______,         _______,       _______,
                                                                         _______,       _______,         _______
@@ -205,6 +223,55 @@ static void send_secret(const char *text, uint16_t after) {
     }
 }
 
+#ifdef POINTING_DEVICE_ENABLE
+/* K_DRAG early start: moving the ball while K is down starts drag-scroll
+ * without waiting for TAPPING_TERM (see pointing_device_task_user).  Tracked
+ * on raw key events, because combos and tap-hold hold K back from
+ * process_record_user, and a J+K / K+L click combo eats K's events entirely. */
+static bool     k_drag_down     = false; // K physically down.
+static uint16_t k_drag_at       = 0;     // When K went down.
+static bool     k_drag_early    = false; // Drag-scroll started by ball movement.
+static bool     k_drag_skip     = false; // Drop K_DRAG's remaining events (no K typed).
+static uint8_t  click_keys_down = 0;     // J or L down: K may be part of a click combo.
+#    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+static bool auto_pointer_on = false; // AUTOPTR flips this.  Off at boot.
+#    endif
+
+/* Runs on the raw key event, before combos and tap-hold timing. */
+bool pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case K_DRAG:
+            k_drag_down = record->event.pressed;
+#    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+            /* Pause auto mouse while K is down: drag-scroll movement would
+             * turn the pointer layer on, and the layer change cancels
+             * drag-scroll. */
+            set_auto_mouse_enable(auto_pointer_on && !record->event.pressed);
+#    endif
+            if (record->event.pressed) {
+                k_drag_at   = timer_read();
+                k_drag_skip = false;
+            } else if (k_drag_early) {
+                /* Turn it off here, not in process_record_user: if K was
+                 * part of a combo, that never sees the release. */
+                k_drag_early = false;
+                k_drag_skip  = true;
+                bkpd_mode_release(MODE_DRAGSCROLL);
+            }
+            break;
+        case KC_J:
+        case KC_L:
+            if (record->event.pressed) {
+                click_keys_down++;
+            } else if (click_keys_down) {
+                click_keys_down--;
+            }
+            break;
+    }
+    return true;
+}
+#endif // POINTING_DEVICE_ENABLE
+
 /* Note: bk_pointing_device calls this before its own keycode handling, and
  * returning false stops both it and the rest of QMK from seeing the key. */
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -212,6 +279,26 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 #ifdef POINTING_DEVICE_ENABLE
         case SMTSCRL:
             smart_scroll_set_active(record->event.pressed);
+            return false;
+        case K_DRAG:
+            if (k_drag_early || k_drag_skip) {
+                /* Started by ball movement: don't type the K, whether QMK
+                 * calls it a tap or a hold.  pre_process_record_user turns
+                 * drag-scroll off on release. */
+                if (!record->event.pressed) {
+                    k_drag_skip = false;
+                }
+                return false;
+            }
+            if (record->tap.count) {
+                return true; // Tapped: QMK sends the K.
+            }
+            /* Held past TAPPING_TERM: drag-scroll until released. */
+            if (record->event.pressed) {
+                bkpd_mode_set_active(MODE_DRAGSCROLL);
+            } else {
+                bkpd_mode_release(MODE_DRAGSCROLL);
+            }
             return false;
 #endif // POINTING_DEVICE_ENABLE
         case CTL_SFT:
@@ -252,6 +339,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case M_LTE:
             SEND_STRING("<=");
             return false;
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+        case AUTOPTR:
+            auto_pointer_on = !auto_pointer_on;
+            set_auto_mouse_enable(auto_pointer_on);
+            /* A disabled auto mouse never turns its layer off. */
+            layer_off(LAYER_POINTER);
+            return false;
+#endif
     }
     return true;
 }
@@ -267,6 +362,13 @@ bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 report_mouse_t pointing_device_task_user(report_mouse_t report) {
+    /* Ball moved while K is down: start drag-scroll without waiting for
+     * TAPPING_TERM.  Not while J or L is down, or before COMBO_TERM has
+     * passed, so the J+K / K+L click combos still click-drag. */
+    if (k_drag_down && !k_drag_early && !click_keys_down && timer_elapsed(k_drag_at) > COMBO_TERM && (report.x || report.y)) {
+        k_drag_early = true;
+        bkpd_mode_set_active(MODE_DRAGSCROLL);
+    }
     return smart_scroll_task(report);
 }
 
@@ -284,7 +386,7 @@ void keyboard_post_init_user(void) {
     bkpd_mode_apply_dpi(bkpd_mode_get_active_id());
 
     bkpd_set_auto_precision_on_mouse_layer_enabled(POINTER_AUTO_PRECISION);
-    bkpd_set_auto_mouse_layer_enabled(true);
+    bkpd_set_auto_mouse_layer_enabled(false); // AUTOPTR turns it on.
 }
 #endif // POINTING_DEVICE_ENABLE
 
@@ -296,7 +398,7 @@ static void fill_layer_color(uint8_t led_min, uint8_t led_max, uint8_t r, uint8_
     }
 }
 
-/* Pressed-key lighting for BASE2 and POINTER2.  Each key press picks a new
+/* Pressed-key lighting for BASE2.  Each key press picks a new
  * color; the key stays lit while held and fades out after release.  Each half
  * spots presses by comparing its own key matrix frame to frame, so this works
  * on both sides of the split without sending key events across. */
@@ -349,14 +451,13 @@ static void light_pressed_keys(uint8_t led_min, uint8_t led_max) {
 }
 
 /* Each layer lights every LED in one color (LAYER_COLOR_* in config.h),
- * scaled by the current RGB brightness.  BASE2 and POINTER2 go dark and light
- * only the keys being pressed (see above).  Base and pointer show the normal
- * RGB effect. */
+ * scaled by the current RGB brightness.  BASE2 goes dark and lights only the
+ * keys being pressed (see above).  Base and pointer show the normal RGB
+ * effect. */
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     track_pressed_keys(led_min, led_max);
     switch (get_highest_layer(layer_state)) {
         case LAYER_BASE2:
-        case LAYER_POINTER2:
             light_pressed_keys(led_min, led_max);
             break;
         case LAYER_MISSING:
@@ -373,8 +474,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 }
 #endif // RGB_MATRIX_ENABLE
 
-/* Shift mod-taps on non-letter keys (Esc/Shift, Enter/Shift, ...) turn into
- * Shift the moment another key goes down, and so do A and S (see below).
+/* Shift mod-taps on non-letter keys (Esc/Shift, ...) turn into Shift the
+ * moment another key goes down, and so do A and S (see below).
  * Other letter mod-taps (home-row mods) keep the default behavior so fast
  * rolls aren't read as modifiers.
  * Matches on keycode, so it follows keys wherever they are in the layout. */
@@ -382,10 +483,15 @@ bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         /* Ctrl on A and Shift on S also turn on the moment another key goes
          * down, so Ctrl/Shift + click, drag or J/K happen instantly in Pro
-         * Tools.  Base layer only: BASE2 (for typing) uses plain A and S. */
+         * Tools.  BASE2 only: base uses plain A and S. */
         case LCTL_T(KC_A):
         case LSFT_T(KC_S):
             return true;
+        /* Hyper includes Shift, so the rule below would catch it.  Space is
+         * typed constantly: only Hyper after TAPPING_TERM (or PERMISSIVE_HOLD),
+         * so fast rolls stay spaces. */
+        case HYP_SPC:
+            return false;
     }
     if (IS_QK_MOD_TAP(keycode)) {
         uint8_t  mods = QK_MOD_TAP_GET_MODS(keycode);

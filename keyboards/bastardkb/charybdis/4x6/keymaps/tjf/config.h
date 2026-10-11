@@ -42,8 +42,12 @@
  * like "as"; higher = easier to hit.  Core default: 50. */
 #define COMBO_TERM 40
 
+/* Lets get_combo_must_tap() in keymap.c make some combos tap-only. */
+#define COMBO_MUST_TAP_PER_COMBO
+
 /* ---------------------------------------------------------------------------
- * Auto mouse (pointer layer turns on when the trackball moves)
+ * Auto mouse (pointer layer turns on when the trackball moves).  Off at boot;
+ * the AUTOPTR key on the SYSTEM layer turns it on and off.
  * ------------------------------------------------------------------------- */
 
 /* Pointer layer index.  Must match LAYER_POINTER in keymap.c (checked at
@@ -58,14 +62,14 @@
 #ifdef AUTO_MOUSE_TIME
 #    undef AUTO_MOUSE_TIME
 #endif
-#define AUTO_MOUSE_TIME 200
+#define AUTO_MOUSE_TIME 350
 
 /* Movement needed to turn the layer on.  Lower = more sensitive.
  * Core default: 10. */
 #ifdef AUTO_MOUSE_THRESHOLD
 #    undef AUTO_MOUSE_THRESHOLD
 #endif
-#define AUTO_MOUSE_THRESHOLD 1
+#define AUTO_MOUSE_THRESHOLD 7
 
 /* Cooldown (ms) after a non-mouse keypress before the trackball may turn the
  * layer on again.  Raise this if the layer fires while you type.
@@ -112,17 +116,17 @@
 
 /* Per-layer colors as r, g, b (0-255), scaled by the RGB brightness.  Base and
  * pointer layers show the normal RGB effect. */
-#define LAYER_COLOR_HYPER 0, 39, 64
 #define LAYER_COLOR_NUMNAV 15, 0, 64
 #define LAYER_COLOR_SYM 64, 0, 58
 #define LAYER_COLOR_SYSTEM 64, 0, 4
 
-/* BASE2 and POINTER2: LEDs off; each key press lights that key in a new color,
+/* BASE2: LEDs off; each key press lights that key in a new color,
  * which fades out after release.  Not scaled by the RGB brightness. */
 #define PRESSED_BRIGHTNESS 255 /* 0-255, while held. */
 #define PRESSED_FADE_MS 600    /* Fade time after release; 0 = off at once. */
-#define PRESSED_HUE_STEP 89    /* Hue change per press, out of 256.  89 lands
-                                * far from recent colors; small = gradual. */
+#define PRESSED_HUE_STEP                              \
+    89 /* Hue change per press, out of 256.  89 lands \
+        * far from recent colors; small = gradual. */
 
 /* Per-layer colors need the layer state on both halves. */
 #define SPLIT_LAYER_STATE_ENABLE
