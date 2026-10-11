@@ -19,11 +19,6 @@
 /* All options for the tjf keymap.  The layout itself lives in keymap.c;
  * Argos/VIA are not used, so nothing in EEPROM overrides it. */
 
-#ifndef __arm__
-/* Disable unused features. */
-#    define NO_ACTION_ONESHOT
-#endif // __arm__
-
 /* ---------------------------------------------------------------------------
  * Tap-hold
  * ------------------------------------------------------------------------- */
