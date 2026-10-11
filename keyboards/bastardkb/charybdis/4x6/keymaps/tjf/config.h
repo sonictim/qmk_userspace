@@ -37,6 +37,17 @@
 #define PERMISSIVE_HOLD
 #define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
 
+/* Flow Tap (layer-taps only, see get_flow_tap_term() in keymap.c): a
+ * layer-tap pressed within this many ms of a typing key is a tap right away,
+ * so it types on the press instead of the release.  Pause a moment before
+ * holding it for its layer. */
+#define FLOW_TAP_TERM 150
+
+/* Speculative Hold (mod-taps, see get_speculative_hold() in keymap.c): the
+ * modifier is on as soon as the key goes down, and cancelled if it turns out
+ * to be a tap.  The tap itself is still sent on release. */
+#define SPECULATIVE_HOLD
+
 /* Combos (key_combos in keymap.c): keys pressed within this many ms of each
  * other count as the combo.  Lower = fewer accidental combos on fast rolls
  * like "as"; higher = easier to hit.  Core default: 50. */

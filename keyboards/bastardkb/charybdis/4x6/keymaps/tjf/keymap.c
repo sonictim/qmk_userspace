@@ -44,7 +44,6 @@ _Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAUL
 #define K_DRAG LT(0, KC_K) // Tap K, hold drag-scroll (see process_record_user).
 enum custom_keycodes {
     SMTSCRL = SAFE_RANGE, // Smart scroll (hold).
-    CTL_SFT,              // Hold Ctrl+Shift and leave the auto pointer layer.
     M_PASS,               // SECRET_PASSWORD, then Enter.
     M_PASS2,              // SECRET_PASSWORD2, then Enter.
     M_USER,               // SECRET_USERNAME, then Tab.
@@ -53,34 +52,39 @@ enum custom_keycodes {
     M_GTE,                // >=
     M_LTE,                // <=
     AUTOPTR,              // Auto pointer layer on/off (off at boot).
+    K_CTRL,               // K_DRAG while Ctrl is held: plain K (pre_process_record_user).
 };
 
 /* Combos: keys pressed together (within COMBO_TERM).  The keys must match the
  * layout exactly, so the A-F ones only fire on BASE2's home-row mods, never on
  * base's plain letters.  When one combo is part of a bigger one (S+D and D+F
  * inside S+D+F), QMK waits and picks the bigger one.
- *   A + S     -> CTL_SFT: Ctrl+Shift right away, held until a key is released.
  *   S + D     -> Shift+S       (tap only, see get_combo_must_tap)
  *   D + F     -> Shift+Cmd+S   (tap only)
  *   S + D + F -> Shift+Opt+S   (tap only)
  *   J + K     -> left click    (held while the keys are held)
- *   K + L     -> right click */
+ *   K + L     -> right click
+ * With Ctrl held, K is K_CTRL instead of K_DRAG, so the clicks have a K_CTRL
+ * copy too (Ctrl+click). */
 enum combos {
-    COMBO_CTL_SFT,
     COMBO_SFT_S,
     COMBO_SFT_CMD_S,
     COMBO_SFT_OPT_S,
     COMBO_LCLICK,
     COMBO_RCLICK,
+    COMBO_LCLICK_CTRL,
+    COMBO_RCLICK_CTRL,
 };
-const uint16_t PROGMEM ctl_sft_combo[]   = {LCTL_T(KC_A), LSFT_T(KC_S), COMBO_END};
 const uint16_t PROGMEM sft_s_combo[]     = {LSFT_T(KC_S), LALT_T(KC_D), COMBO_END};
 const uint16_t PROGMEM sft_cmd_s_combo[] = {LALT_T(KC_D), LGUI_T(KC_F), COMBO_END};
 const uint16_t PROGMEM sft_opt_s_combo[] = {LSFT_T(KC_S), LALT_T(KC_D), LGUI_T(KC_F), COMBO_END};
 const uint16_t PROGMEM lclick_combo[]    = {KC_J, K_DRAG, COMBO_END};
 const uint16_t PROGMEM rclick_combo[]    = {KC_L, K_DRAG, COMBO_END};
+const uint16_t PROGMEM lclick_ctrl_combo[] = {KC_J, K_CTRL, COMBO_END};
+const uint16_t PROGMEM rclick_ctrl_combo[] = {KC_L, K_CTRL, COMBO_END};
 combo_t                key_combos[]      = {
-    [COMBO_CTL_SFT] = COMBO(ctl_sft_combo, CTL_SFT), [COMBO_SFT_S] = COMBO(sft_s_combo, LSFT(KC_S)), [COMBO_SFT_CMD_S] = COMBO(sft_cmd_s_combo, LSG(KC_S)), [COMBO_SFT_OPT_S] = COMBO(sft_opt_s_combo, LSA(KC_S)), [COMBO_LCLICK] = COMBO(lclick_combo, MS_BTN1), [COMBO_RCLICK] = COMBO(rclick_combo, MS_BTN2),
+    [COMBO_SFT_S] = COMBO(sft_s_combo, LSFT(KC_S)), [COMBO_SFT_CMD_S] = COMBO(sft_cmd_s_combo, LSG(KC_S)), [COMBO_SFT_OPT_S] = COMBO(sft_opt_s_combo, LSA(KC_S)), [COMBO_LCLICK] = COMBO(lclick_combo, MS_BTN1), [COMBO_RCLICK] = COMBO(rclick_combo, MS_BTN2),
+    [COMBO_LCLICK_CTRL] = COMBO(lclick_ctrl_combo, MS_BTN1), [COMBO_RCLICK_CTRL] = COMBO(rclick_ctrl_combo, MS_BTN2),
 };
 
 /* Tap-only combos fire when the keys are released within COMBO_HOLD_TERM
@@ -233,6 +237,7 @@ static uint16_t k_drag_at       = 0;     // When K went down.
 static bool     k_drag_early    = false; // Drag-scroll started by ball movement.
 static bool     k_drag_skip     = false; // Drop K_DRAG's remaining events (no K typed).
 static uint8_t  click_keys_down = 0;     // J or L down: K may be part of a click combo.
+static bool     k_ctrl          = false; // This K press was turned into K_CTRL.
 #    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
 static bool auto_pointer_on = false; // AUTOPTR flips this.  Off at boot.
 #    endif
@@ -241,6 +246,16 @@ static bool auto_pointer_on = false; // AUTOPTR flips this.  Off at boot.
 bool pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case K_DRAG:
+            /* Ctrl held (Ctrl+K, Ctrl+Shift+K): swap in K_CTRL, a plain key,
+             * so K isn't held back by tap-hold and never drag-scrolls.  It
+             * still waits up to COMBO_TERM for the Ctrl+click combos.
+             * Speculative mods count, so BASE2's Ctrl-A works while QMK is
+             * still deciding tap or hold. */
+            if (record->event.pressed ? (get_mods() | get_speculative_mods()) & MOD_MASK_CTRL : k_ctrl) {
+                k_ctrl          = record->event.pressed;
+                record->keycode = K_CTRL;
+                break;
+            }
             k_drag_down = record->event.pressed;
 #    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
             /* Pause auto mouse while K is down: drag-scroll movement would
@@ -291,7 +306,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 return false;
             }
             if (record->tap.count) {
-                return true; // Tapped: QMK sends the K.
+                /* Tapped: QMK sends the K.  With Flow Tap that happens while K
+                 * is still down, so stop the ball from starting drag-scroll. */
+                if (record->event.pressed) {
+                    k_drag_down = false;
+                }
+                return true;
             }
             /* Held past TAPPING_TERM: drag-scroll until released. */
             if (record->event.pressed) {
@@ -301,17 +321,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
 #endif // POINTING_DEVICE_ENABLE
-        case CTL_SFT:
+        case K_CTRL:
             if (record->event.pressed) {
-                register_mods(MOD_LCTL | MOD_LSFT);
+                register_code(KC_K);
             } else {
-                unregister_mods(MOD_LCTL | MOD_LSFT);
+                unregister_code(KC_K);
             }
-#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-            /* QMK leaves the pointer layer on for modifiers (for Ctrl+click);
-             * treat this like a normal key instead, so it drops the layer. */
-            auto_mouse_reset_trigger(record->event.pressed);
-#endif
             return false;
     }
     if (!record->event.pressed) {
@@ -474,18 +489,43 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 }
 #endif // RGB_MATRIX_ENABLE
 
-/* Shift mod-taps on non-letter keys (Esc/Shift, ...) turn into Shift the
- * moment another key goes down, and so do A and S (see below).
- * Other letter mod-taps (home-row mods) keep the default behavior so fast
- * rolls aren't read as modifiers.
+/* Mod-taps (SFT_ESC, GUI_SPC, HYP_SPC, BASE2's A/S/D/F, and any new ones):
+ * Speculative Hold (config.h).  The modifier is on from the moment the key
+ * goes down, and is cancelled if the key turns out to be a tap.  QMK's
+ * default only covers Shift and Ctrl; this covers every modifier. */
+bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
+    return true;
+}
+
+/* Layer-taps (KEYPAD, MISSING, PT_Z, K_DRAG, and any new ones): Flow Tap
+ * (FLOW_TAP_TERM in config.h).  Pressed soon after a typing key (letter,
+ * space, punctuation; QMK's is_flow_tap_key), it is a tap right away.  Off
+ * while Ctrl, Cmd or Alt is held.  Never for mod-taps: Flow Tap would block
+ * their modifier right after typing (Cmd+F), and they have Speculative Hold. */
+uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
+    if (IS_QK_MOD_TAP(keycode)) {
+        return 0;
+    }
+    if (is_flow_tap_key(prev_keycode)) {
+        return FLOW_TAP_TERM;
+    }
+    return 0;
+}
+
+/* Mod-taps that become their modifier the moment another key goes down, so
+ * that key (or a J+K click) is sent on its press instead of waiting for the
+ * tap/hold decision.  Speculative Hold already sends the modifier itself on
+ * keydown; this is about the key that comes next.  The cost is that a fast
+ * roll reads as modifier+key, so not on keys used for typing words.
  * Matches on keycode, so it follows keys wherever they are in the layout. */
 bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-        /* Ctrl on A and Shift on S also turn on the moment another key goes
-         * down, so Ctrl/Shift + click, drag or J/K happen instantly in Pro
-         * Tools.  BASE2 only: base uses plain A and S. */
+        /* BASE2's home-row mods (Pro Tools): Ctrl, Shift, Option, Cmd +
+         * click, drag or key happen instantly.  Base uses plain letters. */
         case LCTL_T(KC_A):
         case LSFT_T(KC_S):
+        case LALT_T(KC_D):
+        case LGUI_T(KC_F):
             return true;
         /* Hyper includes Shift, so the rule below would catch it.  Space is
          * typed constantly: only Hyper after TAPPING_TERM (or PERMISSIVE_HOLD),
@@ -493,6 +533,7 @@ bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
         case HYP_SPC:
             return false;
     }
+    /* Shift mod-taps on non-letter keys (SFT_ESC). */
     if (IS_QK_MOD_TAP(keycode)) {
         uint8_t  mods = QK_MOD_TAP_GET_MODS(keycode);
         uint16_t tap  = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
