@@ -50,6 +50,7 @@
 
 /* Lets get_combo_must_tap() in keymap.c make some combos tap-only. */
 #define COMBO_MUST_TAP_PER_COMBO
+#define COMBO_SHOULD_TRIGGER
 
 /* ---------------------------------------------------------------------------
  * Auto mouse (pointer layer turns on when the trackball moves).  Off at boot;
@@ -126,11 +127,11 @@
 #define LAYER_COLOR_SYM 64, 0, 58
 #define LAYER_COLOR_SYSTEM 64, 0, 4
 
-/* BASE2: LEDs off; each key press lights that key in a new color,
+/* PROTOOLS: LEDs off; each key press lights that key in a new color,
  * which fades out after release.  Not scaled by the RGB brightness. */
 #define PRESSED_BRIGHTNESS 255 /* 0-255, while held. */
 #define PRESSED_FADE_MS 600    /* Fade time after release; 0 = off at once. */
-/* Ripple: each press on BASE2 also sends a ring of its color outward.  The
+/* Ripple: each press on PROTOOLS also sends a ring of its color outward.  The
  * keyboard is 224 units wide (one half ~100), about 15 units per key. */
 #define RIPPLE_SPEED 160      /* Units per second the ring grows. */
 #define RIPPLE_MAX_RADIUS 112 /* Ring is gone at this radius (fades on the way). */

@@ -18,9 +18,10 @@ Build: `qmk compile -kb bastardkb/charybdis/4x6/splinktegrated_rev1 -km tjf`
 
 ## Layers
 
-- **Base:** plain typing.  Hold Z for the pointer layer.
-- **BASE2 (Pro Tools):** home-row mods (A Ctrl, S Shift, D Option, F Cmd) and
-  the S/D/F save combos.  Toggle with G on the MISSING layer.  Not for typing:
+- **Base:** typing, with home-row mods (A Ctrl, S Shift, D Option, F Cmd).
+  Hold Z for the pointer layer.
+- **PROTOOLS:** empty overlay, toggled with G on the MISSING layer.  Makes the
+  home-row mods instant and turns on the S/D/F save combos.  Not for typing:
   fast rolls become shortcuts.
 - **MISSING, KEYPAD, SYSTEM:** F-keys/arrows, numpad, board settings.
 
@@ -33,8 +34,9 @@ Build: `qmk compile -kb bastardkb/charybdis/4x6/splinktegrated_rev1 -km tjf`
 
 - **Mod-taps** use Speculative Hold: the modifier is on from keydown.
 - **Layer-taps** use Flow Tap: right after typing, they tap at once.
-- BASE2's mods and `SFT_ESC` also become the modifier as soon as another key
-  goes down (`get_hold_on_other_key_press`).
+- Home-row mods use Flow Tap on base.  With PROTOOLS on, they (and always
+  `SFT_ESC`) become the modifier as soon as another key goes down
+  (`get_hold_on_other_key_press`).
 
 ## Pointer
 
