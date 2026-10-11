@@ -41,7 +41,6 @@ _Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAUL
 #define MISSING LT(LAYER_MISSING, KC_SLSH)
 #define SYS MO(LAYER_SYSTEM)
 #define PT_Z LT(LAYER_POINTER, KC_Z)
-#define K_DRAG LT(0, KC_K) // Tap K, hold drag-scroll (see process_record_user).
 enum custom_keycodes {
     SMTSCRL = SAFE_RANGE, // Smart scroll (hold).
     M_PASS,               // SECRET_PASSWORD, then Enter.
@@ -52,7 +51,6 @@ enum custom_keycodes {
     M_GTE,                // >=
     M_LTE,                // <=
     AUTOPTR,              // Auto pointer layer on/off (off at boot).
-    K_CTRL,               // K_DRAG while Ctrl is held: plain K (pre_process_record_user).
 };
 
 /* Combos: keys pressed together (within COMBO_TERM).  The keys must match the
@@ -63,28 +61,26 @@ enum custom_keycodes {
  *   D + F     -> Shift+Cmd+S   (tap only)
  *   S + D + F -> Shift+Opt+S   (tap only)
  *   J + K     -> left click    (held while the keys are held)
- *   K + L     -> right click
- * With Ctrl held, K is K_CTRL instead of K_DRAG, so the clicks have a K_CTRL
- * copy too (Ctrl+click). */
+ *   K + L     -> drag-scroll   (held while the keys are held)
+ *   L + ;     -> right click
+ * None is inside another, so each fires as soon as both keys are down. */
 enum combos {
     COMBO_SFT_S,
     COMBO_SFT_CMD_S,
     COMBO_SFT_OPT_S,
     COMBO_LCLICK,
     COMBO_RCLICK,
-    COMBO_LCLICK_CTRL,
-    COMBO_RCLICK_CTRL,
+    COMBO_DRGSCRL,
 };
 const uint16_t PROGMEM sft_s_combo[]     = {LSFT_T(KC_S), LALT_T(KC_D), COMBO_END};
 const uint16_t PROGMEM sft_cmd_s_combo[] = {LALT_T(KC_D), LGUI_T(KC_F), COMBO_END};
 const uint16_t PROGMEM sft_opt_s_combo[] = {LSFT_T(KC_S), LALT_T(KC_D), LGUI_T(KC_F), COMBO_END};
-const uint16_t PROGMEM lclick_combo[]    = {KC_J, K_DRAG, COMBO_END};
-const uint16_t PROGMEM rclick_combo[]    = {KC_L, K_DRAG, COMBO_END};
-const uint16_t PROGMEM lclick_ctrl_combo[] = {KC_J, K_CTRL, COMBO_END};
-const uint16_t PROGMEM rclick_ctrl_combo[] = {KC_L, K_CTRL, COMBO_END};
+const uint16_t PROGMEM lclick_combo[]    = {KC_J, KC_K, COMBO_END};
+const uint16_t PROGMEM rclick_combo[]    = {KC_L, KC_SCLN, COMBO_END};
+const uint16_t PROGMEM drgscrl_combo[]   = {KC_K, KC_L, COMBO_END};
 combo_t                key_combos[]      = {
     [COMBO_SFT_S] = COMBO(sft_s_combo, LSFT(KC_S)), [COMBO_SFT_CMD_S] = COMBO(sft_cmd_s_combo, LSG(KC_S)), [COMBO_SFT_OPT_S] = COMBO(sft_opt_s_combo, LSA(KC_S)), [COMBO_LCLICK] = COMBO(lclick_combo, MS_BTN1), [COMBO_RCLICK] = COMBO(rclick_combo, MS_BTN2),
-    [COMBO_LCLICK_CTRL] = COMBO(lclick_ctrl_combo, MS_BTN1), [COMBO_RCLICK_CTRL] = COMBO(rclick_ctrl_combo, MS_BTN2),
+    [COMBO_DRGSCRL] = COMBO(drgscrl_combo, DRGSCRL),
 };
 
 /* Tap-only combos fire when the keys are released within COMBO_HOLD_TERM
@@ -108,7 +104,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
              KC_TAB,          KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,            KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,       KC_BSLS,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
-            SFT_ESC,        KC_A,            KC_S,       KC_D,       KC_F,          KC_G,            KC_H,          KC_J,          K_DRAG,          KC_L,       KC_SCLN,       KC_QUOT,
+            SFT_ESC,        KC_A,            KC_S,       KC_D,       KC_F,          KC_G,            KC_H,          KC_J,          KC_K,          KC_L,       KC_SCLN,       KC_QUOT,
   // ├─────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────┤
            KC_LCTL,        PT_Z,          KC_X,          KC_C,          KC_V,          KC_B,            KC_N,          KC_M,       KC_COMM,        KC_DOT,       KC_SLSH,        KC_EQL,
   // ╰────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────╯
@@ -227,65 +223,9 @@ static void send_secret(const char *text, uint16_t after) {
     }
 }
 
-#ifdef POINTING_DEVICE_ENABLE
-/* K_DRAG early start: moving the ball while K is down starts drag-scroll
- * without waiting for TAPPING_TERM (see pointing_device_task_user).  Tracked
- * on raw key events, because combos and tap-hold hold K back from
- * process_record_user, and a J+K / K+L click combo eats K's events entirely. */
-static bool     k_drag_down     = false; // K physically down.
-static uint16_t k_drag_at       = 0;     // When K went down.
-static bool     k_drag_early    = false; // Drag-scroll started by ball movement.
-static bool     k_drag_skip     = false; // Drop K_DRAG's remaining events (no K typed).
-static uint8_t  click_keys_down = 0;     // J or L down: K may be part of a click combo.
-static bool     k_ctrl          = false; // This K press was turned into K_CTRL.
-#    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
 static bool auto_pointer_on = false; // AUTOPTR flips this.  Off at boot.
-#    endif
-
-/* Runs on the raw key event, before combos and tap-hold timing. */
-bool pre_process_record_user(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case K_DRAG:
-            /* Ctrl held (Ctrl+K, Ctrl+Shift+K): swap in K_CTRL, a plain key,
-             * so K isn't held back by tap-hold and never drag-scrolls.  It
-             * still waits up to COMBO_TERM for the Ctrl+click combos.
-             * Speculative mods count, so BASE2's Ctrl-A works while QMK is
-             * still deciding tap or hold. */
-            if (record->event.pressed ? (get_mods() | get_speculative_mods()) & MOD_MASK_CTRL : k_ctrl) {
-                k_ctrl          = record->event.pressed;
-                record->keycode = K_CTRL;
-                break;
-            }
-            k_drag_down = record->event.pressed;
-#    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-            /* Pause auto mouse while K is down: drag-scroll movement would
-             * turn the pointer layer on, and the layer change cancels
-             * drag-scroll. */
-            set_auto_mouse_enable(auto_pointer_on && !record->event.pressed);
-#    endif
-            if (record->event.pressed) {
-                k_drag_at   = timer_read();
-                k_drag_skip = false;
-            } else if (k_drag_early) {
-                /* Turn it off here, not in process_record_user: if K was
-                 * part of a combo, that never sees the release. */
-                k_drag_early = false;
-                k_drag_skip  = true;
-                bkpd_mode_release(MODE_DRAGSCROLL);
-            }
-            break;
-        case KC_J:
-        case KC_L:
-            if (record->event.pressed) {
-                click_keys_down++;
-            } else if (click_keys_down) {
-                click_keys_down--;
-            }
-            break;
-    }
-    return true;
-}
-#endif // POINTING_DEVICE_ENABLE
+#endif
 
 /* Note: bk_pointing_device calls this before its own keycode handling, and
  * returning false stops both it and the rest of QMK from seeing the key. */
@@ -295,39 +235,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case SMTSCRL:
             smart_scroll_set_active(record->event.pressed);
             return false;
-        case K_DRAG:
-            if (k_drag_early || k_drag_skip) {
-                /* Started by ball movement: don't type the K, whether QMK
-                 * calls it a tap or a hold.  pre_process_record_user turns
-                 * drag-scroll off on release. */
-                if (!record->event.pressed) {
-                    k_drag_skip = false;
-                }
-                return false;
-            }
-            if (record->tap.count) {
-                /* Tapped: QMK sends the K.  With Flow Tap that happens while K
-                 * is still down, so stop the ball from starting drag-scroll. */
-                if (record->event.pressed) {
-                    k_drag_down = false;
-                }
-                return true;
-            }
-            /* Held past TAPPING_TERM: drag-scroll until released. */
-            if (record->event.pressed) {
-                bkpd_mode_set_active(MODE_DRAGSCROLL);
-            } else {
-                bkpd_mode_release(MODE_DRAGSCROLL);
-            }
-            return false;
+#    ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
+        case DRGSCRL:
+            /* Pause auto mouse while drag-scroll is held (K+L): drag-scroll
+             * movement would turn the pointer layer on, and the layer change
+             * cancels drag-scroll. */
+            set_auto_mouse_enable(auto_pointer_on && !record->event.pressed);
+            return true; // bk_pointing_device does the drag-scroll.
+#    endif
 #endif // POINTING_DEVICE_ENABLE
-        case K_CTRL:
-            if (record->event.pressed) {
-                register_code(KC_K);
-            } else {
-                unregister_code(KC_K);
-            }
-            return false;
     }
     if (!record->event.pressed) {
         return true;
@@ -377,13 +293,6 @@ bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
 }
 
 report_mouse_t pointing_device_task_user(report_mouse_t report) {
-    /* Ball moved while K is down: start drag-scroll without waiting for
-     * TAPPING_TERM.  Not while J or L is down, or before COMBO_TERM has
-     * passed, so the J+K / K+L click combos still click-drag. */
-    if (k_drag_down && !k_drag_early && !click_keys_down && timer_elapsed(k_drag_at) > COMBO_TERM && (report.x || report.y)) {
-        k_drag_early = true;
-        bkpd_mode_set_active(MODE_DRAGSCROLL);
-    }
     return smart_scroll_task(report);
 }
 
@@ -546,7 +455,7 @@ bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
 
-/* Layer-taps (KEYPAD, MISSING, PT_Z, K_DRAG, and any new ones): Flow Tap
+/* Layer-taps (KEYPAD, MISSING, PT_Z, and any new ones): Flow Tap
  * (FLOW_TAP_TERM in config.h).  Pressed soon after a typing key (letter,
  * space, punctuation; QMK's is_flow_tap_key), it is a tap right away.  Off
  * while Ctrl, Cmd or Alt is held.  Never for mod-taps: Flow Tap would block
