@@ -81,7 +81,7 @@ combo_t key_combos[] = {
     [COMBO_SFT_OPT_S] = COMBO(sft_opt_s_combo, LSA(KC_S)),
     [COMBO_LCLICK]    = COMBO(lclick_combo,    MS_BTN1),
     [COMBO_RCLICK]    = COMBO(rclick_combo,    MS_BTN2),
-    [COMBO_DRGSCRL]   = COMBO(drgscrl_combo,   DRGSCRL),
+    [COMBO_DRGSCRL]   = COMBO(drgscrl_combo,   SMTSCRL),
 };
 // clang-format on
 
