@@ -32,10 +32,10 @@
 #define PERMISSIVE_HOLD
 #define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
 
-/* Flow Tap (layer-taps only, see get_flow_tap_term() in keymap.c): a
- * layer-tap pressed within this many ms of a typing key is a tap right away,
+/* Flow Tap (layer-taps and home-row mods, see get_flow_tap_term() in
+ * keymap.c): pressed within this many ms of a typing key, it is a tap right away,
  * so it types on the press instead of the release.  Pause a moment before
- * holding it for its layer. */
+ * holding it for its layer or modifier. */
 #define FLOW_TAP_TERM 150
 
 /* Speculative Hold (mod-taps, see get_speculative_hold() in keymap.c): the
@@ -48,13 +48,17 @@
  * like "as"; higher = easier to hit.  Core default: 50. */
 #define COMBO_TERM 40
 
-/* Lets get_combo_must_tap() in keymap.c make some combos tap-only. */
-#define COMBO_MUST_TAP_PER_COMBO
 #define COMBO_SHOULD_TRIGGER
 
+/* Longer window for the J+K / L+; clicks (get_combo_term() in keymap.c), so a
+ * slightly late second key still clicks instead of typing the letters. */
+#define COMBO_TERM_PER_COMBO
+#define COMBO_TERM_CLICK 60
+
 /* ---------------------------------------------------------------------------
- * Auto mouse (pointer layer turns on when the trackball moves).  Off at boot;
- * the AUTOPTR key on the SYSTEM layer turns it on and off.
+ * Auto mouse (pointer layer turns on when the trackball moves).  On at boot;
+ * the AUTOPTR key on the SYSTEM layer turns it on and off (off = mouse combos
+ * and ripple lighting).
  * ------------------------------------------------------------------------- */
 
 /* Pointer layer index.  Must match LAYER_POINTER in keymap.c (checked at
@@ -69,14 +73,14 @@
 #ifdef AUTO_MOUSE_TIME
 #    undef AUTO_MOUSE_TIME
 #endif
-#define AUTO_MOUSE_TIME 350
+#define AUTO_MOUSE_TIME 400
 
 /* Movement needed to turn the layer on.  Lower = more sensitive.
  * Core default: 10. */
 #ifdef AUTO_MOUSE_THRESHOLD
 #    undef AUTO_MOUSE_THRESHOLD
 #endif
-#define AUTO_MOUSE_THRESHOLD 7
+#define AUTO_MOUSE_THRESHOLD 8
 
 /* Cooldown (ms) after a non-mouse keypress before the trackball may turn the
  * layer on again.  Raise this if the layer fires while you type.
@@ -127,11 +131,11 @@
 #define LAYER_COLOR_SYM 64, 0, 58
 #define LAYER_COLOR_SYSTEM 64, 0, 4
 
-/* PROTOOLS: LEDs off; each key press lights that key in a new color,
+/* Auto pointer off: LEDs off; each key press lights that key in a new color,
  * which fades out after release.  Not scaled by the RGB brightness. */
 #define PRESSED_BRIGHTNESS 255 /* 0-255, while held. */
 #define PRESSED_FADE_MS 600    /* Fade time after release; 0 = off at once. */
-/* Ripple: each press on PROTOOLS also sends a ring of its color outward.  The
+/* Ripple: each press also sends a ring of its color outward.  The
  * keyboard is 224 units wide (one half ~100), about 15 units per key. */
 #define RIPPLE_SPEED 160      /* Units per second the ring grows. */
 #define RIPPLE_MAX_RADIUS 112 /* Ring is gone at this radius (fades on the way). */
