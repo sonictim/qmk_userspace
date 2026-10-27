@@ -5,4 +5,5 @@
 #include "quantum.h"
 
 void           smart_scroll_set_active(bool active); // Hold key: pressed / released.
+bool           smart_scroll_has_scrolled(void);       // Since the last press.
 report_mouse_t smart_scroll_task(report_mouse_t report);

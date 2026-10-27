@@ -1,4 +1,5 @@
 /**
+ *
  * Copyright 2021 Charly Delay <charly@codesink.dev> (@0xcharly)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,24 +21,26 @@
 #    include "smart_scroll.h"
 #endif
 
-/* The pointer layer is 1 (must match AUTO_MOUSE_DEFAULT_LAYER in config.h);
- * the others sit above it so they override it when both are active. */
+/* L_POINTER must match AUTO_MOUSE_DEFAULT_LAYER in config.h; the layers after
+ * it override it when both are active. */
 enum charybdis_keymap_layers {
-    LAYER_BASE = 0,
-    LAYER_POINTER,
-    LAYER_MISSING, // Numpad, Ctrl+numpad, arrows, volume.
-    LAYER_KEYPAD,  // Brackets and comparison macros.
-    LAYER_SYSTEM,  // Boot, EEPROM clear, lighting.
+    L_BASE = 0,
+    L_POINTER,
+    L_MISSING, // Numpad, Ctrl+numpad, arrows, volume.
+    L_KEYPAD,  // Brackets and comparison macros.
+    L_SYSTEM,  // Boot, EEPROM clear, lighting.
 };
 
-_Static_assert(LAYER_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAULT_LAYER in config.h to match LAYER_POINTER");
+_Static_assert(L_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAULT_LAYER in config.h to match L_POINTER");
 
-/* Short names so every key fits the same column width in the layouts. */
-#define KEYPAD LT(LAYER_KEYPAD, KC_SPC)
-#define MISSING LT(LAYER_MISSING, KC_SLSH)
-#define PT_Z LT(LAYER_POINTER, KC_Z)
+/* Short name so the key fits the column width in the layout. */
+#define PT_Z LT(L_POINTER, KC_Z)
+#define PT_Z LT(L_POINTER, KC_Z)
+// #define PT_A LT(L_POINTER, KC_A)
+// #define PT_S LT(L_POINTER, KC_S)
 enum custom_keycodes {
     SMTSCRL = SAFE_RANGE, // Smart scroll (hold).
+    SCRL_K,               // Smart scroll at once; a quick tap with no scroll types K.
     M_PASS,               // SECRET_PASSWORD, then Enter.
     M_PASS2,              // SECRET_PASSWORD2, then Enter.
     M_USER,               // SECRET_USERNAME, then Tab.
@@ -45,131 +48,92 @@ enum custom_keycodes {
     M_NEQ,                // !=
     M_GTE,                // >=
     M_LTE,                // <=
-    AUTOPTR,              // Auto pointer layer on/off (on at boot).
 };
 
-/* Mouse combos, only while auto pointer is off (combo_should_trigger).
- *   J + K     -> left click    (held while the keys are held)
- *   K + L     -> smart scroll  (held while the keys are held)
- *   L + ;     -> right click
- * No click combo is inside another, so each fires as soon as both keys are
- * down. */
-enum combos {
-    COMBO_LCLICK,
-    COMBO_RCLICK,
-    COMBO_SMTSCRL,
+/* J + K -> left click (held while the keys are held). */
+const uint16_t PROGMEM lclick_combo[] = {KC_J, KC_K, COMBO_END};
+const uint16_t PROGMEM rclick_combo[] = {KC_L, KC_SCLN, COMBO_END};
+const uint16_t PROGMEM scroll_combo[] = {KC_L, KC_K, COMBO_END};
+combo_t                key_combos[]   = {
+    COMBO(lclick_combo, MS_BTN1),
+    COMBO(rclick_combo, MS_BTN2),
+    COMBO(scroll_combo, SMTSCRL),
 };
-const uint16_t PROGMEM lclick_combo[]  = {KC_J, KC_K, COMBO_END};
-const uint16_t PROGMEM rclick_combo[]  = {KC_L, KC_SCLN, COMBO_END};
-const uint16_t PROGMEM smtscrl_combo[] = {KC_K, KC_L, COMBO_END};
-// clang-format off
-combo_t key_combos[] = {
-    [COMBO_LCLICK]    = COMBO(lclick_combo,    MS_BTN1),
-    [COMBO_RCLICK]    = COMBO(rclick_combo,    MS_BTN2),
-    [COMBO_SMTSCRL]   = COMBO(smtscrl_combo,   SMTSCRL),
-};
-// clang-format on
-
-#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-static bool auto_pointer_on = true; // AUTOPTR flips this.  On at boot.
-#endif
-
-bool combo_should_trigger(uint16_t combo_index, combo_t *combo, uint16_t keycode, keyrecord_t *record) {
-    switch (combo_index) {
-#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-        /* Mouse combos or auto mouse, not both. */
-        case COMBO_LCLICK:
-        case COMBO_RCLICK:
-        case COMBO_SMTSCRL:
-            return !auto_pointer_on;
-#endif
-    }
-    return true;
-}
-
-uint16_t get_combo_term(uint16_t combo_index, combo_t *combo) {
-    switch (combo_index) {
-        case COMBO_LCLICK:
-        case COMBO_RCLICK:
-            return COMBO_TERM_CLICK;
-    }
-    return COMBO_TERM;
-}
 
 // clang-format off
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-  [LAYER_BASE] = LAYOUT(
+  [L_BASE] = LAYOUT(
   //╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-      KC_ESC,              KC_1,                KC_2,                KC_3,                KC_4,                KC_5,                  KC_6,                KC_7,                KC_8,                KC_9,                KC_0,                KC_MINS,
+      LT(L_SYSTEM, KC_ESC),              KC_1,                KC_2,                KC_3,                KC_4,                KC_5,                  KC_6,                KC_7,                KC_8,                KC_9,                KC_0,                LT(L_SYSTEM, KC_MINS),
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
       KC_TAB,              KC_Q,                KC_W,                KC_E,                KC_R,                KC_T,                  KC_Y,                KC_U,                KC_I,                KC_O,                KC_P,                KC_BSLS,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      LSFT_T(KC_ESC),      LCTL_T(KC_A),        LSFT_T(KC_S),        LALT_T(KC_D),        LGUI_T(KC_F),        KC_G,                  KC_H,                KC_J,                KC_K,                KC_L,                KC_SCLN,             KC_QUOT,
+      KC_LSFT,           KC_A,               KC_S,                  KC_D,                 KC_F,                  KC_G,                  KC_H,                KC_J,                KC_K,                KC_L,                KC_SCLN,             KC_QUOT,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
       KC_LCTL,             PT_Z,                KC_X,                KC_C,                KC_V,                KC_B,                  KC_N,                KC_M,                KC_COMM,             KC_DOT,              KC_SLSH,             KC_EQL,
   //╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                                                                     KC_LALT,             LGUI_T(KC_SPC),      HYPR_T(KC_SPC),        KC_ENT,              OSL(LAYER_MISSING),
-                                                                                          KEYPAD,              MISSING,               KC_BSPC
+                                                                  OSM(MOD_HYPR),      LGUI_T(KC_SPC),       LGUI_T(KC_SPC),                     KC_ENT,              LT(L_MISSING, KC_SPC),
+                                                                                            OSL(L_KEYPAD),  KC_LALT,                        KC_BSPC
   //                                                               ╰──────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
   ),
 
-  [LAYER_POINTER] = LAYOUT(
+  [L_POINTER] = LAYOUT(
   //╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
       _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             _______,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
       _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             _______,
+  //├───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+     LSFT_T(KC_ESC),        LGUI_T(KC_A),        LALT_T(KC_S),       LCTL_T(KC_D),        LSFT_T(KC_F),        _______,               _______,             MS_BTN1,             SCRL_K,              _______,             _______,             _______,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             _______,             _______,             _______,             _______,             _______,               _______,             MS_BTN1,             SMTSCRL,             MS_BTN2,             _______,             _______,
-  //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             _______,
+      _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             KC_J,
   //╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
                                                                      _______,             _______,             _______,               _______,             _______,
                                                                                           _______,             _______,               _______
   //                                                               ╰──────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
   ),
 
-  [LAYER_MISSING] = LAYOUT(
+  [L_MISSING] = LAYOUT(
   //╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
       KC_GRV,              KC_F1,               KC_F2,               KC_F3,               KC_F4,               KC_F5,                 KC_F6,               KC_F7,               KC_F8,               KC_F9,               KC_F10,              KC_F12,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             KC_LBRC,             KC_RBRC,             KC_PGUP,             KC_VOLU,
+      _______,             KC_PEQL,             LSFT(KC_LBRC),      KC_LBRC,             LSFT(KC_9),             KC_PPLS,               _______,             LSFT(KC_0),             KC_RBRC,             LSFT(KC_RBRC),             KC_PGUP,             KC_VOLU,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             KC_LCTL,             LSFT_T(KC_S),        KC_LALT,             KC_LGUI,             _______,               KC_LEFT,             KC_DOWN,             KC_UP,               KC_RGHT,             KC_PGDN,             KC_VOLD,
+      LSFT_T(KC_ESC),             LGUI_T(KC_A),        LALT_T(KC_S),      LCTL_T(KC_D),           LSFT_T(KC_F),       _______,               KC_LEFT,             KC_DOWN,             KC_UP,               KC_RGHT,             KC_PGDN,             KC_VOLD,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      MO(LAYER_SYSTEM),    _______,             _______,             _______,             _______,             _______,               M_NEQ,               KC_EQL,              M_LTE,               M_GTE,               _______,             KC_MUTE,
+      _______,              _______,             _______,             _______,             _______,             _______,               M_NEQ,               KC_EQL,              M_LTE,               M_GTE,               _______,             KC_MUTE,
   //╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                                                                     _______,             _______,             _______,               KC_PENT,             KC_PENT,
+                                                                     _______,             _______,             KC_F12,               KC_PENT,             KC_PENT,
                                                                                           _______,             _______,               KC_DEL
   //                                                               ╰──────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
   ),
 
-  [LAYER_KEYPAD] = LAYOUT(
+  [L_KEYPAD] = LAYOUT(
   //╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-      M_PASS2,             KC_P1,               KC_P2,               KC_P3,               KC_P4,               KC_P5,                 KC_P6,               KC_P7,               KC_P8,               KC_P9,               KC_P0,               KC_PMNS,
+      _______,             KC_P1,               KC_P2,               KC_P3,               KC_P4,               KC_P5,                 KC_P6,               KC_P7,               KC_P8,               KC_P9,               KC_P0,               KC_PMNS,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      M_EMAIL,             _______,             _______,             _______,             _______,             _______,               _______,             KC_P7,               KC_P8,               KC_P9,               _______,             KC_PPLS,
+      _______,             _______,             _______,             _______,             _______,             _______,               _______,             KC_P7,               KC_P8,               KC_P9,               _______,             KC_PPLS,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      M_USER,              _______,             _______,             _______,             _______,             _______,               KC_PSLS,             KC_P4,               KC_P5,               KC_P6,               _______,             KC_PEQL,
+      _______,              _______,             _______,             _______,             _______,             _______,               KC_PSLS,             KC_P4,               KC_P5,               KC_P6,               _______,             KC_PEQL,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      M_PASS,              _______,             _______,             _______,             _______,             _______,               KC_PDOT,             KC_P1,               KC_P2,               KC_P3,               KC_PSLS,             KC_PAST,
+      _______,              _______,             _______,             _______,             _______,             _______,               KC_PDOT,             KC_P1,               KC_P2,               KC_P3,               KC_PSLS,             KC_PAST,
   //╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                                                                     _______,             _______,             _______,               _______,             KC_PENT,
-                                                                                          _______,             _______,               KC_P0
+                                                                     _______,             _______,             _______,               KC_PPLS,             KC_P0,
+                                                                                          _______,             _______,               KC_PMNS
   //                                                               ╰──────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
   ),
 
-  [LAYER_SYSTEM] = LAYOUT(
+  [L_SYSTEM] = LAYOUT(
   //╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ ╭─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-      _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             QK_BOOT,
+      QK_BOOT,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             EE_CLR,             QK_BOOT,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             RM_ON,               RM_OFF,              RM_PREV,             EE_CLR,
+      M_EMAIL,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             RM_ON,               RM_OFF,              RM_PREV,             EE_CLR,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             _______,
+      M_USER,             _______,             _______,             _______,             _______,             _______,               _______,             _______,             _______,             _______,             _______,             _______,
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
-      _______,             _______,             _______,             _______,             _______,             _______,               RM_NEXT,             AUTOPTR,             _______,             _______,             _______,             _______,
+      M_PASS,             M_PASS2,             _______,             _______,             _______,             _______,               RM_NEXT,             TG(L_POINTER),             _______,             _______,             _______,             _______,
   //╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                                                                     _______,             _______,             _______,               _______,             _______,
-                                                                                          _______,             _______,               _______
+                                                                     _______,             _______,             _______,               KC_VOLU,             KC_MUTE,
+                                                                                          _______,             _______,               KC_VOLD
   //                                                               ╰──────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
   ),
 };
@@ -205,18 +169,55 @@ static void send_secret(const char *text, uint16_t after) {
     }
 }
 
+#ifdef POINTING_DEVICE_ENABLE
+static bool     scrl_k_pending = false; // SCRL_K held, could still be a K.
+static uint16_t scrl_k_timer;
+#endif
+
 /* Note: bk_pointing_device calls this before its own keycode handling, and
  * returning false stops both it and the rest of QMK from seeing the key. */
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+#ifdef POINTING_DEVICE_ENABLE
+    /* Another key while SCRL_K is held and hasn't scrolled: it was a typed K
+     * (keeps rolls like "ki" in order). */
+    if (scrl_k_pending && keycode != SCRL_K && record->event.pressed && !smart_scroll_has_scrolled()) {
+        scrl_k_pending = false;
+        smart_scroll_set_active(false);
+        tap_code(KC_K);
+    }
+#endif
     switch (keycode) {
 #ifdef POINTING_DEVICE_ENABLE
         case SMTSCRL:
             smart_scroll_set_active(record->event.pressed);
             return false;
-#endif // POINTING_DEVICE_ENABLE
+        case SCRL_K: // On POINTER.
+            if (record->event.pressed) {
+                scrl_k_pending = true;
+                scrl_k_timer   = timer_read();
+                smart_scroll_set_active(true);
+            } else {
+                if (scrl_k_pending && !smart_scroll_has_scrolled() && timer_elapsed(scrl_k_timer) < TAPPING_TERM) {
+                    tap_code(KC_K);
+                }
+                scrl_k_pending = false;
+                smart_scroll_set_active(false);
+            }
+            return false;
+        case LT(0, KC_L): // On POINTER: tap L, hold right click.
+            if (!record->tap.count) {
+                if (record->event.pressed) {
+                    register_code16(MS_BTN2);
+                } else {
+                    unregister_code16(MS_BTN2);
+                }
+                return false;
+            }
+            break;
+#endif                     // POINTING_DEVICE_ENABLE
         case LSFT_T(KC_S): // On MISSING: tap Shift+S, hold Shift.
-            if (layer_state_is(LAYER_MISSING) && record->tap.count && record->event.pressed) {
-                tap_code16(S(KC_S));
+            if (layer_state_is(L_MISSING) && record->tap.count && record->event.pressed) {
+                tap_code16(LSFT(KC_S));
                 return false;
             }
             break;
@@ -246,28 +247,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case M_LTE:
             SEND_STRING("<=");
             return false;
-#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-        case AUTOPTR:
-            auto_pointer_on = !auto_pointer_on;
-            set_auto_mouse_enable(auto_pointer_on);
-            /* A disabled auto mouse never turns its layer off. */
-            layer_off(LAYER_POINTER);
-            return false;
-#endif
     }
     return true;
 }
 
 #ifdef POINTING_DEVICE_ENABLE
-/* Keep the auto mouse layer active while smart scroll is held. */
-bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case SMTSCRL:
-            return true;
-    }
-    return false;
-}
-
 report_mouse_t pointing_device_task_user(report_mouse_t report) {
     return smart_scroll_task(report);
 }
@@ -286,7 +270,8 @@ void keyboard_post_init_user(void) {
     bkpd_mode_apply_dpi(bkpd_mode_get_active_id());
 
     bkpd_set_auto_precision_on_mouse_layer_enabled(POINTER_AUTO_PRECISION);
-    bkpd_set_auto_mouse_layer_enabled(true); // AUTOPTR turns it off.
+    /* The module always builds auto mouse in; keep it off. */
+    bkpd_set_auto_mouse_layer_enabled(false);
 }
 #endif // POINTING_DEVICE_ENABLE
 
@@ -300,8 +285,8 @@ static void fill_layer_color(uint8_t led_min, uint8_t led_max, uint8_t r, uint8_
     }
 }
 
-/* Pressed-key lighting while auto pointer is off.  Each key press picks a new color; the key
- * stays lit while held and fades out after release, and a ring of that color
+/* Pressed-key lighting on the MODS layer.  Each key press picks a new
+ * color; the key stays lit while held and fades out after release, and a ring of that color
  * ripples outward from it.  Each half spots presses by comparing its own key
  * matrix frame to frame, so this works on both sides of the split without
  * sending key events across. */
@@ -399,28 +384,23 @@ static void light_pressed_keys(uint8_t led_min, uint8_t led_max) {
     }
 }
 
-/* Each layer lights every LED in one color (LAYER_COLOR_* in config.h),
- * scaled by the current RGB brightness.  Base and pointer show the normal RGB
- * effect, or with auto pointer off (mouse combos on) go dark and light only
- * the keys being pressed (see above). */
+/* MISSING, KEYPAD and SYSTEM light every LED in one color (LAYER_COLOR_* in
+ * config.h), scaled by the current RGB brightness.  MODS goes dark and lights
+ * only the keys being pressed (see above).  Base and pointer show the normal
+ * RGB effect. */
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     track_pressed_keys(led_min, led_max);
     switch (get_highest_layer(layer_state)) {
-#ifdef POINTING_DEVICE_AUTO_MOUSE_ENABLE
-        case LAYER_BASE:
-        case LAYER_POINTER:
-            if (!auto_pointer_on) {
-                light_pressed_keys(led_min, led_max);
-            }
+        case L_POINTER:;
+            light_pressed_keys(led_min, led_max);
             break;
-#endif
-        case LAYER_MISSING:
+        case L_MISSING:
             fill_layer_color(led_min, led_max, LAYER_COLOR_NUMNAV);
             break;
-        case LAYER_KEYPAD:
+        case L_KEYPAD:
             fill_layer_color(led_min, led_max, LAYER_COLOR_SYM);
             break;
-        case LAYER_SYSTEM:
+        case L_SYSTEM:
             fill_layer_color(led_min, led_max, LAYER_COLOR_SYSTEM);
             break;
     }
@@ -436,7 +416,7 @@ bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
     return true;
 }
 
-/* Layer-taps (KEYPAD, MISSING, PT_Z, and any new ones) and home-row mods: Flow Tap
+/* Layer-taps (the thumb layer keys, PT_Z, and any new ones) and home-row mods: Flow Tap
  * (FLOW_TAP_TERM in config.h).  Pressed soon after a typing key (letter,
  * space, punctuation; QMK's is_flow_tap_key), it is a tap right away.  Off
  * while Ctrl, Cmd or Alt is held.  Never for other mod-taps: Flow Tap would
@@ -444,8 +424,8 @@ bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
 uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
     switch (keycode) {
         /* Home-row mods: Flow Tap, so typing rolls stay letters. */
-        case LCTL_T(KC_A):
         case LSFT_T(KC_S):
+        case LCTL_T(KC_A):
         case LALT_T(KC_D):
         case LGUI_T(KC_F):
             break;

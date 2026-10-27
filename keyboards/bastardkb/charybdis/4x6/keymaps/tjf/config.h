@@ -43,56 +43,22 @@
  * to be a tap.  The tap itself is still sent on release. */
 #define SPECULATIVE_HOLD
 
-/* Combos (key_combos in keymap.c): keys pressed within this many ms of each
- * other count as the combo.  Lower = fewer accidental combos on fast rolls
- * like "as"; higher = easier to hit.  Core default: 50. */
-#define COMBO_TERM 40
-
-#define COMBO_SHOULD_TRIGGER
-
-/* Longer window for the J+K / L+; clicks (get_combo_term() in keymap.c), so a
- * slightly late second key still clicks instead of typing the letters. */
-#define COMBO_TERM_PER_COMBO
-#define COMBO_TERM_CLICK 60
-
-/* ---------------------------------------------------------------------------
- * Auto mouse (pointer layer turns on when the trackball moves).  On at boot;
- * the AUTOPTR key on the SYSTEM layer turns it on and off (off = mouse combos
- * and ripple lighting).
- * ------------------------------------------------------------------------- */
-
-/* Pointer layer index.  Must match LAYER_POINTER in keymap.c (checked at
- * build time).  bk_pointing_device also uses it for the DPI indicator. */
-#ifdef AUTO_MOUSE_DEFAULT_LAYER
-#    undef AUTO_MOUSE_DEFAULT_LAYER
-#endif
-#define AUTO_MOUSE_DEFAULT_LAYER 1
-
-/* Idle time (ms) after the last movement before the layer turns off.
- * Core default: 650. */
-#ifdef AUTO_MOUSE_TIME
-#    undef AUTO_MOUSE_TIME
-#endif
-#define AUTO_MOUSE_TIME 400
-
-/* Movement needed to turn the layer on.  Lower = more sensitive.
- * Core default: 10. */
-#ifdef AUTO_MOUSE_THRESHOLD
-#    undef AUTO_MOUSE_THRESHOLD
-#endif
-#define AUTO_MOUSE_THRESHOLD 8
-
-/* Cooldown (ms) after a non-mouse keypress before the trackball may turn the
- * layer on again.  Raise this if the layer fires while you type.
- * Core default: 25. */
-#ifdef AUTO_MOUSE_DEBOUNCE
-#    undef AUTO_MOUSE_DEBOUNCE
-#endif
-#define AUTO_MOUSE_DEBOUNCE 25
+/* J+K click combo (key_combos in keymap.c): both keys within this many ms of
+ * each other click.  Lower = fewer accidental clicks on fast "jk" rolls;
+ * higher = easier to hit.  Core default: 50. */
+#define COMBO_TERM 60
 
 /* ---------------------------------------------------------------------------
  * Pointer (applied at every boot)
  * ------------------------------------------------------------------------- */
+
+/* Pointer layer index.  Must match L_POINTER in keymap.c (checked at build
+ * time).  Auto mouse is off (keymap.c), but bk_pointing_device still uses this
+ * for POINTER_AUTO_PRECISION and its DPI indicator. */
+#ifdef AUTO_MOUSE_DEFAULT_LAYER
+#    undef AUTO_MOUSE_DEFAULT_LAYER
+#endif
+#define AUTO_MOUSE_DEFAULT_LAYER 1
 
 /* DPI for each pointer mode, in steps of 100.  Normal: 100-3100.  Sniping and
  * drag-scroll: 100-2100 (r10's defaults for both are 500).  DPI_MOD changes
@@ -116,7 +82,7 @@
 #define SMART_SCROLL_LOCK_THRESHOLD 16
 
 /* Higher = slower scrolling. */
-#define SMART_SCROLL_DIVISOR 24.0f
+#define SMART_SCROLL_DIVISOR 48.0f
 
 /* Idle time (ms) before the axis unlocks and is picked again; 0 = never. */
 #define SMART_SCROLL_RELOCK_MS 300
@@ -126,12 +92,12 @@
  * ------------------------------------------------------------------------- */
 
 /* Per-layer colors as r, g, b (0-255), scaled by the RGB brightness.  Base and
- * pointer layers show the normal RGB effect. */
+ * pointer show the normal RGB effect (RM_NEXT/RM_PREV on SYSTEM pick it). */
 #define LAYER_COLOR_NUMNAV 15, 0, 64
 #define LAYER_COLOR_SYM 64, 0, 58
 #define LAYER_COLOR_SYSTEM 64, 0, 4
 
-/* Auto pointer off: LEDs off; each key press lights that key in a new color,
+/* MODS layer: LEDs off; each key press lights that key in a new color,
  * which fades out after release.  Not scaled by the RGB brightness. */
 #define PRESSED_BRIGHTNESS 255 /* 0-255, while held. */
 #define PRESSED_FADE_MS 600    /* Fade time after release; 0 = off at once. */
@@ -153,11 +119,6 @@
 #endif
 #define LED_DPI_INDICATOR_INDEX 1 // accomodate invisible 2 first LEDs for easier DIY build debugging
 
-#ifdef RGBLIGHT_LED_COUNT
-#    undef RGBLIGHT_LED_COUNT
-#endif
-#define RGBLIGHT_LED_COUNT 56
-
 /* ---------------------------------------------------------------------------
  * Workarounds (not settings)
  * ------------------------------------------------------------------------- */
@@ -169,3 +130,10 @@
 #define pointing_device_type_trackpad_procyon 1
 #define pointing_device_type_trackball 2
 #define pointing_device_type_trackpad_cirque 3
+
+/* bk_pointing_device's DPI indicator loops over RGBLIGHT_LED_COUNT LEDs, even
+ * with RGB Matrix instead of RGBLight.  Must match the LED count. */
+#ifdef RGBLIGHT_LED_COUNT
+#    undef RGBLIGHT_LED_COUNT
+#endif
+#define RGBLIGHT_LED_COUNT 56

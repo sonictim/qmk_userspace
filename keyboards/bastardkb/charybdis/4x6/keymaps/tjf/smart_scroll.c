@@ -32,6 +32,7 @@ static int16_t       smart_scroll_probe_x     = 0; // Motion gathered before the
 static int16_t       smart_scroll_probe_y     = 0;
 static float         smart_scroll_acc         = 0; // Sub-tick remainder on the locked axis.
 static uint32_t      smart_scroll_last_motion = 0;
+static bool          smart_scroll_scrolled    = false; // An axis locked since the last press.
 
 static void smart_scroll_reset(void) {
     smart_scroll_axis    = SCROLL_AXIS_NONE;
@@ -42,7 +43,14 @@ static void smart_scroll_reset(void) {
 
 void smart_scroll_set_active(bool active) {
     smart_scroll_active = active;
+    if (active) {
+        smart_scroll_scrolled = false;
+    }
     smart_scroll_reset();
+}
+
+bool smart_scroll_has_scrolled(void) {
+    return smart_scroll_scrolled;
 }
 
 report_mouse_t smart_scroll_task(report_mouse_t report) {
@@ -72,7 +80,8 @@ report_mouse_t smart_scroll_task(report_mouse_t report) {
         if (ax + ay < SMART_SCROLL_LOCK_THRESHOLD) {
             return report; // Not enough movement to decide yet.
         }
-        smart_scroll_axis = (ay >= ax) ? SCROLL_AXIS_V : SCROLL_AXIS_H;
+        smart_scroll_axis     = (ay >= ax) ? SCROLL_AXIS_V : SCROLL_AXIS_H;
+        smart_scroll_scrolled = true;
         // Carry the probe motion into the first scroll so nothing is lost.
         dx = smart_scroll_probe_x;
         dy = smart_scroll_probe_y;
