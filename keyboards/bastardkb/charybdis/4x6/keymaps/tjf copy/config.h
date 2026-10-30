@@ -19,11 +19,6 @@
 /* All options for the tjf keymap.  The layout itself lives in keymap.c;
  * Argos/VIA are not used, so nothing in EEPROM overrides it. */
 
-#ifndef __arm__
-/* Disable unused features. */
-#    define NO_ACTION_ONESHOT
-#endif // __arm__
-
 /* ---------------------------------------------------------------------------
  * Tap-hold
  * ------------------------------------------------------------------------- */
@@ -37,16 +32,33 @@
 #define PERMISSIVE_HOLD
 #define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
 
+/* Flow Tap (layer-taps and home-row mods, see get_flow_tap_term() in
+ * keymap.c): pressed within this many ms of a typing key, it is a tap right away,
+ * so it types on the press instead of the release.  Pause a moment before
+ * holding it for its layer or modifier. */
+#define FLOW_TAP_TERM 150
+
+/* Speculative Hold (mod-taps, see get_speculative_hold() in keymap.c): the
+ * modifier is on as soon as the key goes down, and cancelled if it turns out
+ * to be a tap.  The tap itself is still sent on release. */
+#define SPECULATIVE_HOLD
+
 /* Combos (key_combos in keymap.c): keys pressed within this many ms of each
  * other count as the combo.  Lower = fewer accidental combos on fast rolls
  * like "as"; higher = easier to hit.  Core default: 50. */
 #define COMBO_TERM 40
 
-/* Lets get_combo_must_tap() in keymap.c make some combos tap-only. */
-#define COMBO_MUST_TAP_PER_COMBO
+#define COMBO_SHOULD_TRIGGER
+
+/* Longer window for the J+K / L+; clicks (get_combo_term() in keymap.c), so a
+ * slightly late second key still clicks instead of typing the letters. */
+#define COMBO_TERM_PER_COMBO
+#define COMBO_TERM_CLICK 60
 
 /* ---------------------------------------------------------------------------
- * Auto mouse (pointer layer turns on when the trackball moves)
+ * Auto mouse (pointer layer turns on when the trackball moves).  On at boot;
+ * the AUTOPTR key on the SYSTEM layer turns it on and off (off = mouse combos
+ * and ripple lighting).
  * ------------------------------------------------------------------------- */
 
 /* Pointer layer index.  Must match LAYER_POINTER in keymap.c (checked at
@@ -61,14 +73,14 @@
 #ifdef AUTO_MOUSE_TIME
 #    undef AUTO_MOUSE_TIME
 #endif
-#define AUTO_MOUSE_TIME 350
+#define AUTO_MOUSE_TIME 250
 
 /* Movement needed to turn the layer on.  Lower = more sensitive.
  * Core default: 10. */
 #ifdef AUTO_MOUSE_THRESHOLD
 #    undef AUTO_MOUSE_THRESHOLD
 #endif
-#define AUTO_MOUSE_THRESHOLD 7
+#define AUTO_MOUSE_THRESHOLD 8
 
 /* Cooldown (ms) after a non-mouse keypress before the trackball may turn the
  * layer on again.  Raise this if the layer fires while you type.
@@ -104,7 +116,7 @@
 #define SMART_SCROLL_LOCK_THRESHOLD 16
 
 /* Higher = slower scrolling. */
-#define SMART_SCROLL_DIVISOR 24.0f
+#define SMART_SCROLL_DIVISOR 48.0f
 
 /* Idle time (ms) before the axis unlocks and is picked again; 0 = never. */
 #define SMART_SCROLL_RELOCK_MS 300
@@ -115,21 +127,29 @@
 
 /* Per-layer colors as r, g, b (0-255), scaled by the RGB brightness.  Base and
  * pointer layers show the normal RGB effect. */
-#define LAYER_COLOR_HYPER 0, 39, 64
 #define LAYER_COLOR_NUMNAV 15, 0, 64
 #define LAYER_COLOR_SYM 64, 0, 58
 #define LAYER_COLOR_SYSTEM 64, 0, 4
 
-/* BASE2 and POINTER2: LEDs off; each key press lights that key in a new color,
+/* Auto pointer off: LEDs off; each key press lights that key in a new color,
  * which fades out after release.  Not scaled by the RGB brightness. */
 #define PRESSED_BRIGHTNESS 255 /* 0-255, while held. */
 #define PRESSED_FADE_MS 600    /* Fade time after release; 0 = off at once. */
+/* Ripple: each press also sends a ring of its color outward.  The
+ * keyboard is 224 units wide (one half ~100), about 15 units per key. */
+#define RIPPLE_SPEED 160      /* Units per second the ring grows. */
+#define RIPPLE_MAX_RADIUS 112 /* Ring is gone at this radius (fades on the way). */
+#define RIPPLE_WIDTH 18       /* Ring thickness, center to edge. */
+#define RIPPLE_COUNT 8        /* Ripples at once; fast typing reuses the oldest. */
 #define PRESSED_HUE_STEP                              \
     89 /* Hue change per press, out of 256.  89 lands \
         * far from recent colors; small = gradual. */
 
 /* Per-layer colors need the layer state on both halves. */
 #define SPLIT_LAYER_STATE_ENABLE
+/* Sends the AUTOPTR on/off state to the other half (ripple lighting). */
+#define SPLIT_TRANSACTION_IDS_USER RPC_ID_USER_AUTOPTR_SYNC
+#define AUTOPTR_SYNC_MS 500 /* Resend this often, in case the other half restarted. */
 
 #ifdef LED_DPI_INDICATOR_INDEX
 #    undef LED_DPI_INDICATOR_INDEX

@@ -35,9 +35,10 @@ _Static_assert(L_POINTER == AUTO_MOUSE_DEFAULT_LAYER, "Set AUTO_MOUSE_DEFAULT_LA
 
 /* Short name so the key fits the column width in the layout. */
 #define PT_Z LT(L_POINTER, KC_Z)
-#define PT_Z LT(L_POINTER, KC_Z)
 // #define PT_A LT(L_POINTER, KC_A)
 // #define PT_S LT(L_POINTER, KC_S)
+#define CTLOPTCMD OSM(MOD_LCTL | MOD_LALT | MOD_LGUI)
+#define CTLCMD OSM(MOD_LCTL | MOD_LGUI)
 enum custom_keycodes {
     SMTSCRL = SAFE_RANGE, // Smart scroll (hold).
     SCRL_K,               // Smart scroll at once; a quick tap with no scroll types K.
@@ -51,13 +52,13 @@ enum custom_keycodes {
 };
 
 /* J + K -> left click (held while the keys are held). */
-const uint16_t PROGMEM lclick_combo[] = {KC_J, KC_K, COMBO_END};
-const uint16_t PROGMEM rclick_combo[] = {KC_L, KC_SCLN, COMBO_END};
-const uint16_t PROGMEM scroll_combo[] = {KC_L, KC_K, COMBO_END};
-combo_t                key_combos[]   = {
-    COMBO(lclick_combo, MS_BTN1),
-    COMBO(rclick_combo, MS_BTN2),
-    COMBO(scroll_combo, SMTSCRL),
+const uint16_t PROGMEM lclick_combo[]      = {KC_J, KC_K, COMBO_END};
+const uint16_t PROGMEM rclick_combo[]      = {KC_L, KC_SCLN, COMBO_END};
+const uint16_t PROGMEM scroll_combo[]      = {KC_L, KC_K, COMBO_END};
+const uint16_t PROGMEM ctl_opt_cmd_combo[] = {LALT_T(KC_SPC), OSL(L_KEYPAD), COMBO_END};
+const uint16_t PROGMEM ctl_cmd_combo[]     = {LGUI_T(KC_SPC), OSL(L_KEYPAD), COMBO_END};
+combo_t                key_combos[]        = {
+    COMBO(lclick_combo, MS_BTN1), COMBO(rclick_combo, MS_BTN2), COMBO(scroll_combo, SMTSCRL), COMBO(ctl_cmd_combo, CTLCMD), COMBO(ctl_opt_cmd_combo, CTLOPTCMD),
 };
 
 // clang-format off
@@ -72,8 +73,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
       KC_LCTL,             PT_Z,                KC_X,                KC_C,                KC_V,                KC_B,                  KC_N,                KC_M,                KC_COMM,             KC_DOT,              KC_SLSH,             KC_EQL,
   //╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤ ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                                                                  OSM(MOD_HYPR),      LGUI_T(KC_SPC),       LGUI_T(KC_SPC),                     KC_ENT,              LT(L_MISSING, KC_SPC),
-                                                                                            OSL(L_KEYPAD),  KC_LALT,                        KC_BSPC
+                                                                  OSM(MOD_HYPR),      LALT_T(KC_SPC),       LGUI_T(KC_SPC),                     KC_ENT,              LT(L_MISSING, KC_SPC),
+                                                                                            OSL(L_KEYPAD),  OSL(L_KEYPAD),                        KC_BSPC
   //                                                               ╰──────────────────────────────────────────────────────────────╯ ╰─────────────────────────────────────────╯
   ),
 
