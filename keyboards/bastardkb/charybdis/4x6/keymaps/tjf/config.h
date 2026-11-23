@@ -82,10 +82,10 @@
 #define SMART_SCROLL_LOCK_THRESHOLD 16
 
 /* Higher = slower scrolling. */
-#define SMART_SCROLL_DIVISOR 48.0f
+#define SMART_SCROLL_DIVISOR 72.0f
 
 /* Idle time (ms) before the axis unlocks and is picked again; 0 = never. */
-#define SMART_SCROLL_RELOCK_MS 300
+#define SMART_SCROLL_RELOCK_MS 200
 
 /* ---------------------------------------------------------------------------
  * Lighting
